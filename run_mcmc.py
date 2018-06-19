@@ -23,6 +23,7 @@ import experiment_params
 import emcee
 
 
+# Perhaps move this function somewhere else ?
 def set_up_mcmc(mcmc_params, exp_params):
     """
     Sets up the different objects for the mcmc-run.
@@ -91,6 +92,7 @@ insert_data(data, observables)
 
 sampler = emcee.EnsembleSampler(mcmc_params.n_walkers, model.n_params, lnprob,
                                 args=(model, observables, map_obj))
+
 # starting positions (when implementing priors properly,
 # find a good way to draw the starting values from that prior.)
 pos = 5 + np.random.randn(mcmc_params.n_walkers, model.n_params)
@@ -109,5 +111,6 @@ samples = samples.reshape(mcmc_params.n_steps * len(pos), model.n_params)
 np.save('samles', samples)
 
 # maybe swich to corner?
-plt.hist(samples[0])
+n_cut = mcmc_params.n_steps / 5
+plt.hist(samples[n_cut:, 0])
 plt.show()
