@@ -57,7 +57,8 @@ def calculate_power_spec_3d(map_obj, k_bin=None):
     Pk_modes = np.histogram(kgrid[kgrid>0], bins=k_bin, weights=ps[kgrid>0])[0]
     nmodes, k_array = np.histogram(kgrid[kgrid>0], bins=k_bin)
 
-    Pk = Pk_modes/nmodes
+    Pk = Pk_modes
+    Pk[np.where(nmodes>0)] = Pk_modes[np.where(nmodes>0)]/nmodes[np.where(nmodes>0)]
     k = (k_array[1:] + k_array[:-1])/2.
 
     return Pk, k, nmodes#angular_average_3d(ps, map_obj.fx, map_obj.fy, map_obj.fz, dk)

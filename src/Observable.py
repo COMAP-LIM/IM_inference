@@ -12,6 +12,7 @@ class Observable:
     def __init__(self):
         self.sum = None
 
+
     def calculate_observable(self, map):
         pass
 
@@ -31,13 +32,14 @@ class Observable:
 
 
 class Power_Spectrum(Observable):
-    def __init__(self):
+    def __init__(self, mcmc_params):
         self.sum = None
         self.label = 'ps'
+        self.mcmc_params = mcmc_params
 
     def calculate_observable(self, map):
         self.values, self.dk, self.n_modes = \
-            src.tools.calculate_power_spec_3d(map)
+            src.tools.calculate_power_spec_3d(map, self.mcmc_params.ps_kbins)
 
     def independent_variance(self):
         self.independent_var = self.mean / np.sqrt(self.n_modes)
