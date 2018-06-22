@@ -72,6 +72,7 @@ def lnprob(model_params, model, observables, map_obj):
 
     # calculate the actual likelihoods
     ln_likelihood = 0.0
+    ln_prior = 0.0
     if (mcmc_params.likelihood == 'chi_squared'):
         for observable in observables:
             ln_likelihood += \
@@ -80,9 +81,9 @@ def lnprob(model_params, model, observables, map_obj):
                     observable.mean,
                     observable.independent_var
                 )
-    # Implement priors in some good way (this is completely ad-hoc).
-    prior = norm.logpdf(model_params[0], loc=5, scale=2)
-    return prior + ln_likelihood
+            ln_prior += model.ln_prior(model_params,
+                                       mcmc_params.prior_params[model.label])
+    return ln_prior + ln_likelihood
 
 
 model, observables, map_obj = set_up_mcmc(mcmc_params, experiment_params)

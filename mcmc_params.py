@@ -10,3 +10,10 @@ likelihood = 'chi_squared'
 observables = ('ps')
 
 model = 'wn_ps'
+
+prior_params = dict()
+
+# Gaussian prior for white_noise power spectrum
+prior_params['wn_ps'] = [
+    [5.0, 3.0]  # sigma_T
+]
