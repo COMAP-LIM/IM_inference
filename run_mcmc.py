@@ -11,6 +11,8 @@ to a set of observables) and constrain the model
 parameters of some IM-model.
 """
 import numpy as np
+import matplotlib as mpl
+mpl.use('TkAgg') # Ensure that the Tkinter backend is used for generating figures
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 import src.MapObj
@@ -111,6 +113,6 @@ samples = samples.reshape(mcmc_params.n_steps * len(pos), model.n_params)
 np.save('samles', samples)
 
 # maybe swich to corner?
-n_cut = mcmc_params.n_steps / 5
+n_cut = mcmc_params.n_steps // 5
 plt.hist(samples[n_cut:, 0])
 plt.show()
