@@ -11,6 +11,8 @@ to a set of observables) and constrain the model
 parameters of some IM-model.
 """
 import numpy as np
+import matplotlib as mpl
+mpl.use('TkAgg') # Ensure that the Tkinter backend is used for generating figures
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 import src.MapObj
@@ -34,10 +36,12 @@ def set_up_mcmc(mcmc_params, exp_params):
     # At some point we should add some checks to make sure that a
     # valid model, and a set of observables are actually picked.
     if 'ps' in mcmc_params.observables:
-        ps = src.Observable.Power_Spectrum()
+        ps = src.Observable.Power_Spectrum(mcmc_params)
         observables.append(ps)
     if (mcmc_params.model == 'wn_ps'):
         model = src.Model.WhiteNoisePowerSpectrum(exp_params)
+    if (mcmc_params.model == 'pl_ps'):
+        model = src.Model.PowerLawPowerSpectrum(exp_params)
     map_obj = src.MapObj.MapObj(exp_params)
     return model, observables, map_obj
 
@@ -79,8 +83,10 @@ def lnprob(model_params, model, observables, map_obj):
                     observable.mean,
                     observable.independent_var
                 )
-            ln_prior += model.ln_prior(model_params,
-                                       mcmc_params.prior_params[model.label])
+    ln_prior += model.ln_prior(model_params,
+                               mcmc_params.prior_params[model.label])
+    if not np.isfinite(ln_prior):
+        return ln_prior
     return ln_prior + ln_likelihood
 
 
@@ -96,7 +102,7 @@ sampler = emcee.EnsembleSampler(mcmc_params.n_walkers, model.n_params, lnprob,
 
 # starting positions (when implementing priors properly,
 # find a good way to draw the starting values from that prior.)
-pos = 5 + np.random.randn(mcmc_params.n_walkers, model.n_params)
+pos = np.array([8,2]) + np.random.randn(mcmc_params.n_walkers, model.n_params)
 
 samples = np.zeros((mcmc_params.n_steps, len(pos), model.n_params))
 
@@ -109,9 +115,9 @@ while i < mcmc_params.n_steps:
         i += 1
 samples = samples.reshape(mcmc_params.n_steps * len(pos), model.n_params)
 
-np.save('samles', samples)
+np.save('samles2', samples)
 
 # maybe swich to corner?
-n_cut = mcmc_params.n_steps / 5
+n_cut = mcmc_params.n_steps // 5
 plt.hist(samples[n_cut:, 0])
 plt.show()
