@@ -1,7 +1,7 @@
 import numpy as np
 
 n_walkers = 10
-n_steps = 400
+n_steps = 1000
 
 # number of independent simulations of the model for each
 # step in the MCMC
