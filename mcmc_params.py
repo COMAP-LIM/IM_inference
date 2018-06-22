@@ -1,3 +1,5 @@
+import numpy as np
+
 n_walkers = 2
 n_steps = 400
 
@@ -12,6 +14,8 @@ observables = ('ps')
 model = 'wn_ps'
 
 prior_params = dict()
+
+ps_kbins = np.logspace(1,3, 20)
 
 # Gaussian prior for white_noise power spectrum
 prior_params['wn_ps'] = [
