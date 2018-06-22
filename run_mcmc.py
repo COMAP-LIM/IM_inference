@@ -11,8 +11,6 @@ to a set of observables) and constrain the model
 parameters of some IM-model.
 """
 import numpy as np
-import matplotlib as mpl
-mpl.use('TkAgg') # Ensure that the Tkinter backend is used for generating figures
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 import src.MapObj
@@ -102,9 +100,12 @@ sampler = emcee.EnsembleSampler(mcmc_params.n_walkers, model.n_params, lnprob,
 
 # starting positions (when implementing priors properly,
 # find a good way to draw the starting values from that prior.)
-pos = np.array([8,2]) + np.random.randn(mcmc_params.n_walkers, model.n_params)
+pos = np.array([6.5, 3.0]) + np.random.randn(mcmc_params.n_walkers,
+                                             model.n_params)
 
-samples = np.zeros((mcmc_params.n_steps, len(pos), model.n_params))
+samples = np.zeros((mcmc_params.n_steps,
+                    mcmc_params.n_walkers,
+                    model.n_params))
 
 i = 0
 while i < mcmc_params.n_steps:
@@ -113,11 +114,7 @@ while i < mcmc_params.n_steps:
         samples[i], _, blobs = result
         pos = samples[i]
         i += 1
-samples = samples.reshape(mcmc_params.n_steps * len(pos), model.n_params)
+samples = samples.reshape(mcmc_params.n_steps * mcmc_params.n_walkers,
+                          model.n_params)
 
-np.save('samles2', samples)
-
-# maybe swich to corner?
-n_cut = mcmc_params.n_steps // 5
-plt.hist(samples[n_cut:, 0])
-plt.show()
+np.save('samples', samples)
