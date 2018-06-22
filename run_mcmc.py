@@ -81,8 +81,8 @@ def lnprob(model_params, model, observables, map_obj):
                     observable.mean,
                     observable.independent_var
                 )
-            ln_prior += model.ln_prior(model_params,
-                                       mcmc_params.prior_params[model.label])
+    ln_prior += model.ln_prior(model_params,
+                               mcmc_params.prior_params[model.label])
     return ln_prior + ln_likelihood
 
 
