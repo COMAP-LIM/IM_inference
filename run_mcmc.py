@@ -21,7 +21,7 @@ import src.likelihoods
 import mcmc_params
 import experiment_params
 import emcee
-
+import sys
 
 # Perhaps move this function somewhere else ?
 def set_up_mcmc(mcmc_params, exp_params):
@@ -47,9 +47,15 @@ def set_up_mcmc(mcmc_params, exp_params):
 def insert_data(data, observables):
     # Inserts data downloaded from file into the corresponding observable
     # objects.
-    for observable in observables:
-        # remove "item()"" here if data is dict (and not gotten from file)
-        observable.data = data.item()[observable.label]
+    if isinstance(data, dict):
+        for observable in observables:
+            # remove "item()"" here if data is dict (and not gotten from file)
+            observable.data = data[observable.label]
+    else:
+        for observable in observables:
+            # remove "item()"" here if data is dict (and not gotten from file)
+            observable.data = data.item()[observable.label]
+
 
 
 def lnprob(model_params, model, observables, map_obj):
@@ -63,7 +69,7 @@ def lnprob(model_params, model, observables, map_obj):
     # to estimate the mean value of the different observables
     # at the current model parameters.
     for i in range(mcmc_params.n_realizations):
-        map_obj.map = model.generate_map(model_params)
+        map_obj.map = model.generate_map(model_params) + map_obj.generate_noise_map()
         map_obj.calculate_observables(observables)
         for observable in observables:
             observable.add_observable_to_sum()
@@ -83,26 +89,57 @@ def lnprob(model_params, model, observables, map_obj):
                 )
     ln_prior += model.ln_prior(model_params,
                                mcmc_params.prior_params[model.label])
-    if not np.isfinite(ln_prior):
-        return ln_prior
+    if not np.isfinite(ln_prior) or not np.isfinite(ln_likelihood):
+        return -np.infty
     return ln_prior + ln_likelihood
 
+
+def get_data(mcmc_params, exp_params, observables, model):
+
+    if mcmc_params.generate_file != True:
+        data=np.load(mcmc_params.filename)
+        print('open file')
+
+    else:
+        #model_params = [8.3] sigma_T for wn_ps
+        model_params = mcmc_params.model_params_true[model.label] # A and alpha for pw_ps
+
+        map_obj.map = model.generate_map(model_params) + map_obj.generate_noise_map()
+        map_obj.calculate_observables(observables)
+
+        data = dict()
+
+        for observable in observables:
+            data[observable.label] = observable.values
+            print(observable.values)
+            if 0 in observable.values:
+                print('some of data values are equal to 0')
+                sys.exit()
+
+        if mcmc_params.save_file:
+            print('making the file')
+            np.save(mcmc_params.filename, data)
+
+    #print(data.item()['ps'])
+
+    insert_data(data, observables)
+
+        
+    return data
 
 model, observables, map_obj = set_up_mcmc(mcmc_params, experiment_params)
 
 # load mock data
-data = np.load("ps_data.npy")
-
-insert_data(data, observables)
+get_data(mcmc_params, experiment_params, observables, model)#np.load("ps_data.npy")
 
 sampler = emcee.EnsembleSampler(mcmc_params.n_walkers, model.n_params, lnprob,
                                 args=(model, observables, map_obj))
 
 # starting positions (when implementing priors properly,
 # find a good way to draw the starting values from that prior.)
-pos = np.array([6.5, 3.0]) + np.random.randn(mcmc_params.n_walkers,
-                                             model.n_params)
-
+#pos = np.array([6.5, 3.0]) + np.random.randn(mcmc_params.n_walkers,
+#                                             model.n_params)
+pos = model.mcmc_walker_initial_positions(mcmc_params.prior_params[model.label], mcmc_params.n_walkers )
 samples = np.zeros((mcmc_params.n_steps,
                     mcmc_params.n_walkers,
                     model.n_params))

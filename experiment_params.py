@@ -6,7 +6,9 @@ import numpy as np
 
 # We should also have info about noise here.
 
-n = 20
+n = 10
 x = np.linspace(0, 1, n + 1)
 y = np.linspace(0, 1, n + 1)
 z = np.linspace(0, 1, n + 1)
+
+sigma_T = 14. # noise

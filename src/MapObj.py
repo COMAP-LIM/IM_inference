@@ -9,11 +9,11 @@ class MapObj:
     Should in the future also contain info about pixel size, FWHM,
     frequencies etc.
     """
-    def __init__(self, exp_param):
-        self.exp_param = exp_param
-        self.x = exp_param.x
-        self.y = exp_param.y
-        self.z = exp_param.z
+    def __init__(self, exp_params):
+        self.exp_params = exp_params
+        self.x = exp_params.x
+        self.y = exp_params.y
+        self.z = exp_params.z
         self.n_x = len(self.x) - 1
         self.n_y = len(self.y) - 1
         self.n_z = len(self.z) - 1
@@ -33,3 +33,7 @@ class MapObj:
     def calculate_observables(self, Observables):
         for observable in Observables:
             observable.calculate_observable(self)
+
+    def generate_noise_map(self):
+        noise_map = self.exp_params.sigma_T*np.random.randn(self.n_x, self.n_y, self.n_z)
+        return noise_map

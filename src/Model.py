@@ -37,6 +37,11 @@ class WhiteNoisePowerSpectrum(Model):
         n_z = len(self.exp_params.z) - 1
         return np.random.randn(n_x, n_y, n_z) * sigma_T
 
+    def mcmc_walker_initial_positions(self, prior_params, n_walkers):
+        p_par = np.transpose(prior_params)#list(map(list,zip(*prior_params)))
+        mean, sigma = p_par[0], p_par[1]
+        return mean + sigma*np.random.randn(n_walkers, len(mean))
+
     def ln_prior(self, model_params, prior_params):
         ln_prior = 0.0
         if (model_params[0] < 0.0):
@@ -57,8 +62,8 @@ class PowerLawPowerSpectrum(Model):
         self.n_params = 2
         self.label = 'pl_ps'
 
-    #@staticmethod # look into 'pythonic' way of static methods
-    def power_spect_pl(self,k, model_params):
+    @staticmethod # look into 'pythonic' way of static methods
+    def power_spect_pl(k, model_params):
         A, alpha = model_params
         return A*k**alpha
 
@@ -87,6 +92,11 @@ class PowerLawPowerSpectrum(Model):
         if_k = np.fft.ifftn(f_k) * (n_x * n_y * n_z)
         return if_k.real
 
+    def mcmc_walker_initial_positions(self, prior_params, n_walkers):
+        p_par = np.transpose(prior_params) #list(map(list, zip(*prior_params)))
+        mean, sigma = p_par[0], p_par[1] 
+        return mean + sigma*np.random.randn(n_walkers, len(mean))
+        
 
     def ln_prior(self, model_params, prior_params):
         ln_prior = 0.0
