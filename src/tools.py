@@ -1,7 +1,8 @@
 import numpy as np
 import numpy.fft as fft
-
-
+import scipy
+from scipy import signal
+import sys
 # Calculates the angular average of any map.
 def angular_average_3d(inmap, x, y, z, dr, x0=0, y0=0, z0=0):
     x_ind, y_ind, z_ind = np.indices(inmap.shape)
@@ -55,10 +56,43 @@ def calculate_power_spec_3d(map_obj, k_bin=None):
     #fft_map = fft.fftshift(fft_map)
     ps = np.abs(fft_map) ** 2 * map_obj.volume
     Pk_modes = np.histogram(kgrid[kgrid>0], bins=k_bin, weights=ps[kgrid>0])[0]
-    nmodes, k_array = np.histogram(kgrid[kgrid>0], bins=k_bin)
+    nmodes, k_edges = np.histogram(kgrid[kgrid>0], bins=k_bin)
 
     Pk = Pk_modes
     Pk[np.where(nmodes>0)] = Pk_modes[np.where(nmodes>0)]/nmodes[np.where(nmodes>0)]
-    k = (k_array[1:] + k_array[:-1])/2.
+    k_array = (k_edges[1:] + k_edges[:-1])/2.
 
-    return Pk, k, nmodes#angular_average_3d(ps, map_obj.fx, map_obj.fy, map_obj.fz, dk)
+    return Pk, k_array, nmodes#angular_average_3d(ps, map_obj.fx, map_obj.fy, map_obj.fz, dk)
+
+
+def calculate_vid(map_obj, T_bin=None):
+
+    if T_bin is None:
+        Tx = np.fft.fftfreq(map_obj.n_x, d=map_obj.dx)*2*np.pi
+        Ty = np.fft.fftfreq(map_obj.n_y, d=map_obj.dy)*2*np.pi
+        dT = max(np.diff(Tx)[0], np.diff(Ty)[0])
+        Tmax_dT = int(np.ceil(max(np.amax(Tx),np.amax(Ty), np.amax(Tz))/dT))
+        T_bin = np.linspace(0, kmax_dk, kmax_dk+1)
+    try:
+        B_val, T_edges = np.histogram(map_obj.map.flatten(), bins=T_bin)
+        T_array = (T_edges[1:] + T_edges[:-1])/2.
+        return B_val, T_array
+    except ValueError:
+        print('wrong')
+        sys.exit()
+        #print(map_obj.map)
+
+
+def gaussian_kernel(sigma_x, sigma_y, n_sigma=5.0):
+     size_y = int(n_sigma * sigma_y)
+     size_x = int(n_sigma * sigma_x)
+     y, x = scipy.mgrid[-size_y:size_y + 1, -size_x:size_x + 1]
+     g = np.exp(-(x ** 2 / (2. * sigma_x ** 2) + y ** 2 / (2. * sigma_y 
+** 2)))
+     return g / g.sum()
+
+
+def gaussian_smooth(mymap, sigma_x, sigma_y, n_sigma=5.0):
+     kernel = gaussian_kernel(sigma_y, sigma_x, n_sigma=n_sigma)
+     smoothed_map = signal.fftconvolve(mymap, kernel[:, :, None], mode='same')
+     return smoothed_map

@@ -36,6 +36,9 @@ def set_up_mcmc(mcmc_params, exp_params):
     if 'ps' in mcmc_params.observables:
         ps = src.Observable.Power_Spectrum(mcmc_params)
         observables.append(ps)
+    if 'vid' in mcmc_params.observables:
+        vid = src.Observable.Voxel_Intensity_Distribution(mcmc_params)
+        observables.append(vid)
     if (mcmc_params.model == 'wn_ps'):
         model = src.Model.WhiteNoisePowerSpectrum(exp_params)
     if (mcmc_params.model == 'pl_ps'):
@@ -68,6 +71,12 @@ def lnprob(model_params, model, observables, map_obj):
     # Simulate the required number of realizations in order
     # to estimate the mean value of the different observables
     # at the current model parameters.
+    ln_prior = 0.0
+    ln_prior += model.ln_prior(model_params,
+                               mcmc_params.prior_params[model.label])
+    if not np.isfinite(ln_prior):
+        return -np.infty
+
     for i in range(mcmc_params.n_realizations):
         map_obj.map = model.generate_map(model_params) + map_obj.generate_noise_map()
         map_obj.calculate_observables(observables)
@@ -78,7 +87,6 @@ def lnprob(model_params, model, observables, map_obj):
 
     # calculate the actual likelihoods
     ln_likelihood = 0.0
-    ln_prior = 0.0
     if (mcmc_params.likelihood == 'chi_squared'):
         for observable in observables:
             ln_likelihood += \
@@ -87,10 +95,9 @@ def lnprob(model_params, model, observables, map_obj):
                     observable.mean,
                     observable.independent_var
                 )
-    ln_prior += model.ln_prior(model_params,
-                               mcmc_params.prior_params[model.label])
     if not np.isfinite(ln_prior) or not np.isfinite(ln_likelihood):
         return -np.infty
+
     return ln_prior + ln_likelihood
 
 
@@ -101,8 +108,7 @@ def get_data(mcmc_params, exp_params, observables, model):
         print('open file')
 
     else:
-        #model_params = [8.3] sigma_T for wn_ps
-        model_params = mcmc_params.model_params_true[model.label] # A and alpha for pw_ps
+        model_params = mcmc_params.model_params_true[model.label]
 
         map_obj.map = model.generate_map(model_params) + map_obj.generate_noise_map()
         map_obj.calculate_observables(observables)

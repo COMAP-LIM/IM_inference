@@ -35,5 +35,6 @@ class MapObj:
             observable.calculate_observable(self)
 
     def generate_noise_map(self):
-        noise_map = self.exp_params.sigma_T*np.random.randn(self.n_x, self.n_y, self.n_z)
-        return noise_map
+        return self.exp_params.sigma_T*np.random.randn(self.n_x, self.n_y, self.n_z)
+        
+        

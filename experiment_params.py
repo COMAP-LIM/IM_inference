@@ -12,3 +12,9 @@ y = np.linspace(0, 1, n + 1)
 z = np.linspace(0, 1, n + 1)
 
 sigma_T = 14. # noise
+
+sigma_x = 0.5 # for instrumental beam
+sigma_y = 0.5
+
+map_smoothing = True
+#n_sigma = 5.
