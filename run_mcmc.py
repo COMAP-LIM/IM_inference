@@ -22,6 +22,7 @@ import mcmc_params
 import experiment_params
 import emcee
 import sys
+import datetime
 
 # Perhaps move this function somewhere else ?
 def set_up_mcmc(mcmc_params, exp_params):
@@ -95,7 +96,7 @@ def lnprob(model_params, model, observables, map_obj):
                     observable.mean,
                     observable.independent_var
                 )
-    if not np.isfinite(ln_prior) or not np.isfinite(ln_likelihood):
+    if not np.isfinite(ln_likelihood):
         return -np.infty
 
     return ln_prior + ln_likelihood
@@ -104,27 +105,27 @@ def lnprob(model_params, model, observables, map_obj):
 def get_data(mcmc_params, exp_params, observables, model):
 
     if mcmc_params.generate_file != True:
-        data=np.load(mcmc_params.filename)
-        print('open file')
+        print('opening map data file')
+        map_obj.map=np.load(mcmc_params.map_filename)
+       
 
     else:
         model_params = mcmc_params.model_params_true[model.label]
-
         map_obj.map = model.generate_map(model_params) + map_obj.generate_noise_map()
-        map_obj.calculate_observables(observables)
-
-        data = dict()
-
-        for observable in observables:
-            data[observable.label] = observable.values
-            print(observable.values)
-            if 0 in observable.values:
-                print('some of data values are equal to 0')
-                sys.exit()
-
         if mcmc_params.save_file:
-            print('making the file')
-            np.save(mcmc_params.filename, data)
+            print('saving map to file')
+            np.save(mcmc_params.map_filename, map_obj.map)
+
+    map_obj.calculate_observables(observables)
+
+    data = dict()
+
+    for observable in observables:
+        data[observable.label] = observable.values
+        print(observable.values)
+        if 0 in observable.values:
+            print('some of data values are equal to 0')
+            sys.exit()
 
     #print(data.item()['ps'])
 
@@ -132,6 +133,9 @@ def get_data(mcmc_params, exp_params, observables, model):
 
         
     return data
+
+start_time = datetime.datetime.now()
+mcmc_chains_fp, mcmc_log_fp = src.tools.make_log_file_handles(mcmc_params.output_dir)
 
 model, observables, map_obj = set_up_mcmc(mcmc_params, experiment_params)
 
@@ -151,13 +155,18 @@ samples = np.zeros((mcmc_params.n_steps,
                     model.n_params))
 
 i = 0
-while i < mcmc_params.n_steps:
-    print('undergoing iteration {0}'.format(i))
-    for result in sampler.sample(pos, iterations=1, storechain=True):
-        samples[i], _, blobs = result
-        pos = samples[i]
-        i += 1
+with open(mcmc_chains_fp, 'w') as chains_file:
+    while i < mcmc_params.n_steps:
+        print('undergoing iteration {0}'.format(i))
+        for result in sampler.sample(pos, iterations=1, storechain=True):
+            samples[i], _, blobs = result
+            pos = samples[i]
+            chains_file.write(str(samples[i])+'\n')
+            i += 1
+
 samples = samples.reshape(mcmc_params.n_steps * mcmc_params.n_walkers,
                           model.n_params)
 
-np.save('samples', samples)
+np.save(mcmc_params.samples_filename, samples)
+
+src.tools.make_log_file(mcmc_log_fp, start_time)

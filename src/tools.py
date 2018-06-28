@@ -3,6 +3,11 @@ import numpy.fft as fft
 import scipy
 from scipy import signal
 import sys
+import datetime
+import time
+import os
+import errno
+import shutil
 # Calculates the angular average of any map.
 def angular_average_3d(inmap, x, y, z, dr, x0=0, y0=0, z0=0):
     x_ind, y_ind, z_ind = np.indices(inmap.shape)
@@ -68,11 +73,7 @@ def calculate_power_spec_3d(map_obj, k_bin=None):
 def calculate_vid(map_obj, T_bin=None):
 
     if T_bin is None:
-        Tx = np.fft.fftfreq(map_obj.n_x, d=map_obj.dx)*2*np.pi
-        Ty = np.fft.fftfreq(map_obj.n_y, d=map_obj.dy)*2*np.pi
-        dT = max(np.diff(Tx)[0], np.diff(Ty)[0])
-        Tmax_dT = int(np.ceil(max(np.amax(Tx),np.amax(Ty), np.amax(Tz))/dT))
-        T_bin = np.linspace(0, kmax_dk, kmax_dk+1)
+        T_bin = np.linspace(np.amin(map_obj.map), np.amax(map_obj.map), np.amax(map_obj.map)+1)
     try:
         B_val, T_edges = np.histogram(map_obj.map.flatten(), bins=T_bin)
         T_array = (T_edges[1:] + T_edges[:-1])/2.
@@ -96,3 +97,42 @@ def gaussian_smooth(mymap, sigma_x, sigma_y, n_sigma=5.0):
      kernel = gaussian_kernel(sigma_y, sigma_x, n_sigma=n_sigma)
      smoothed_map = signal.fftconvolve(mymap, kernel[:, :, None], mode='same')
      return smoothed_map
+
+
+def ensure_dir_exists(path):
+     try:
+         os.makedirs(path)
+     except OSError as exception:
+         if exception.errno != errno.EEXIST:
+             raise
+
+def make_log_file_handles(output_dir):
+    ensure_dir_exists(output_dir+'/params')
+    ensure_dir_exists(output_dir+'/chains')
+    ensure_dir_exists(output_dir+'/log_files')
+
+    runid = 0
+    while os.path.isfile(os.path.join(
+        output_dir, 'params', 
+        'mcmc_params_run{0:d}.py'.format(runid))):
+        runid += 1
+
+    mcmc_params_fp = os.path.join(
+                     output_dir, 'params', 
+                     'mcmc_params_run{0:d}.py'.format(runid))
+    mcmc_chains_fp = os.path.join(
+                     output_dir, 'chains', 
+                    'mcmc_chains_run{0:d}.dat'.format(runid))
+    mcmc_log_fp = os.path.join(
+                  output_dir, 'log_files', 
+                  'mcmc_log_run{0:d}.txt'.format(runid))
+
+    shutil.copy2('mcmc_params.py', mcmc_params_fp)
+    return mcmc_chains_fp, mcmc_log_fp
+
+def make_log_file(mcmc_log_fp, start_time):
+    with open(mcmc_log_fp, 'w') as log_file, open('mcmc_params.py', 'r') as param_file:
+        log_file.write('Time start of run     : %s \n'% (start_time))
+        log_file.write('Time end of run       : %s \n'% (datetime.datetime.now()))
+        log_file.write('Total execution time  : %s seconds \n' % ((datetime.datetime.now()-start_time).total_seconds() ))
+        log_file.write('\n Parameters: \n'+param_file.read())

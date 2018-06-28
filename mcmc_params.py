@@ -1,7 +1,7 @@
 import numpy as np
 
 n_walkers = 10
-n_steps = 1000
+n_steps = 100
 
 # number of independent simulations of the model for each
 # step in the MCMC
@@ -35,6 +35,9 @@ model_params_true = dict()
 model_params_true['wn_ps'] = [8.3] #sigma_T for wn_ps
 model_params_true['pl_ps'] = [8., 2.] # A and alpha for pw_ps
 
-filename = 'trial_of_generate2.npy'
-generate_file = False #True
+map_filename = 'trial1.npy'
+samples_filename = 'samples_vid.npy'
+
+output_dir = 'testing_output'
+generate_file = False
 save_file = True

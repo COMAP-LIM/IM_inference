@@ -3,6 +3,7 @@
 *.pyc
 test.py
 testing_mcmc.py
+testing_mcmc2.py
 generate_data.py
 .vscode/settings.json
 .pytest_cache/v/cache/nodeids
