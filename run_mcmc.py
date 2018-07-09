@@ -12,7 +12,6 @@ parameters of some IM-model.
 """
 import numpy as np
 from scipy.stats import norm
-import matplotlib.pyplot as plt
 import src.MapObj
 import src.tools
 import src.Model
@@ -31,6 +30,7 @@ def set_up_mcmc(mcmc_params, exp_params):
     """
 
     observables = []
+    map_obj = src.MapObj.MapObj(exp_params)
     # Add more if-statements as other observables are implemented.
     # At some point we should add some checks to make sure that a
     # valid model, and a set of observables are actually picked.
@@ -43,8 +43,8 @@ def set_up_mcmc(mcmc_params, exp_params):
     if (mcmc_params.model == 'wn_ps'):
         model = src.Model.WhiteNoisePowerSpectrum(exp_params)
     if (mcmc_params.model == 'pl_ps'):
-        model = src.Model.PowerLawPowerSpectrum(exp_params)
-    map_obj = src.MapObj.MapObj(exp_params)
+        model = src.Model.PowerLawPowerSpectrum(exp_params, map_obj)
+
     return model, observables, map_obj
 
 
@@ -161,7 +161,7 @@ with open(mcmc_chains_fp, 'w') as chains_file:
         for result in sampler.sample(pos, iterations=1, storechain=True):
             samples[i], _, blobs = result
             pos = samples[i]
-            chains_file.write(str(samples[i])+'\n')
+            chains_file.write(str(samples[0])+'\n')
             i += 1
 
 samples = samples.reshape(mcmc_params.n_steps * mcmc_params.n_walkers,

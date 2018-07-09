@@ -2,6 +2,7 @@ import numpy as np
 from scipy.stats import norm
 import src.MapObj
 import src.tools
+import sys
 
 class Model:
     """
@@ -61,8 +62,9 @@ class PowerLawPowerSpectrum(Model):
     Power law power spectrum P(k)=Ak^alpha.
     """
 
-    def __init__(self, exp_params):
+    def __init__(self, exp_params, map_obj):
         self.exp_params = exp_params
+        self.map_obj = map_obj
         self.n_params = 2
         self.label = 'pl_ps'
 
@@ -73,25 +75,17 @@ class PowerLawPowerSpectrum(Model):
 
     def generate_map(self, model_params):
         #A, alpha = model_param
-        x = self.exp_params.x
-        y = self.exp_params.y
-        z = self.exp_params.z
-        n_x = len(self.exp_params.x) - 1
-        n_y = len(self.exp_params.y) - 1
-        n_z = len(self.exp_params.z) - 1
-        dx = x[1] - x[0]
-        dy = y[1] - y[0]
-        dz = z[1] - z[0]
-        volume = ((x[-1] - x[0])
-                       * (y[-1] - y[0])
-                       * (z[-1] - z[0])
-                       )
-        kx = np.fft.fftfreq(n_x, d = dx)*2*np.pi
-        ky = np.fft.fftfreq(n_y, d = dy)*2*np.pi
-        kz = np.fft.fftfreq(n_z, d = dz)*2*np.pi
+        n_x = self.map_obj.n_x
+        n_y = self.map_obj.n_y
+        n_z = self.map_obj.n_z
+        
+
+        kx = np.fft.fftfreq(n_x, d = self.map_obj.dx)*2*np.pi
+        ky = np.fft.fftfreq(n_y, d = self.map_obj.dy)*2*np.pi
+        kz = np.fft.fftfreq(n_z, d = self.map_obj.dz)*2*np.pi
         kgrid = np.sqrt(sum(ki**2 for ki in np.meshgrid(kx, ky, kz, indexing ='ij')))
 
-        f_k_real= np.random.randn(n_x, n_y, n_z)*np.sqrt( self.power_spect_pl(kgrid,model_params)/volume )        
+        f_k_real= np.random.randn(n_x, n_y, n_z)*np.sqrt( self.power_spect_pl(kgrid,model_params)/self.map_obj.volume )        
         f_k=f_k_real + 1j*f_k_real
         if_k = np.fft.ifftn(f_k) * (n_x * n_y * n_z)
         #print(self.power_spect_pl(kgrid,model_params)/volume)

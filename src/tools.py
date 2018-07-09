@@ -4,10 +4,10 @@ import scipy
 from scipy import signal
 import sys
 import datetime
-import time
 import os
 import errno
 import shutil
+
 # Calculates the angular average of any map.
 def angular_average_3d(inmap, x, y, z, dr, x0=0, y0=0, z0=0):
     x_ind, y_ind, z_ind = np.indices(inmap.shape)
@@ -120,6 +120,9 @@ def make_log_file_handles(output_dir):
     mcmc_params_fp = os.path.join(
                      output_dir, 'params', 
                      'mcmc_params_run{0:d}.py'.format(runid))
+    exp_params_fp = os.path.join(
+                     output_dir, 'params', 
+                     'experiment_params_run{0:d}.py'.format(runid))
     mcmc_chains_fp = os.path.join(
                      output_dir, 'chains', 
                     'mcmc_chains_run{0:d}.dat'.format(runid))
@@ -128,6 +131,7 @@ def make_log_file_handles(output_dir):
                   'mcmc_log_run{0:d}.txt'.format(runid))
 
     shutil.copy2('mcmc_params.py', mcmc_params_fp)
+    shutil.copy2('experiment_params.py', exp_params_fp)
     return mcmc_chains_fp, mcmc_log_fp
 
 def make_log_file(mcmc_log_fp, start_time):
