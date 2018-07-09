@@ -113,31 +113,10 @@ class PowerLawPowerSpectrum(Model):
         return ln_prior
 
 
-class Mhalo_to_Lco(Model):#exp_params, mcmc_params, halos):
-    # Inherit Model
-    # Model -->Mhalo_to_Lco --> Mhalo_to_Lco_model
-    def __init__(self, exp_params, model, halos, map_obj):
-        self.exp_params = exp_params
-        self.label      = model
-        self.halos      = halos
-        self.map_obj    = map_obj
-        self.coeffs     = exp_params.coeffs
-        print('hei1')
 
-    def __call__(self):
-        print('hei2')
-        dict={'Lco_test': Mhalo_to_Lco_test}
-        if self.label in dict.keys():
-            print('hei3')
-            return dict[self.label]()
-        else: 
-            sys.exit('model not in dictionary')
-'''
-'''
-class Mhalo_to_Lco_test(Model):#halos, coeffs):
-    # Inherit Mhalo_to_Lco
-    # Lco model goes here, using halo mass to calculate
-    def __init__(self, exp_params, model, halos, map_obj):
+class Mhalo_to_Lco_test(Model):
+    
+    def __init__(self, exp_params, halos, map_obj):
         self.exp_params = exp_params
         self.label      = "Lco_test"
         self.halos      = halos

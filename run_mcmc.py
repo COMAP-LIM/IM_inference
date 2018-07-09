@@ -31,9 +31,9 @@ def set_up_mcmc(mcmc_params, exp_params):
 
     observables = []
     map_obj = src.MapObj.MapObj(exp_params)
-    halos, cosmo = llm.load_peakpatch_catalogue(exp_params.halo_catalogue_file)
+    halos, cosmo = src.tools.load_peakpatch_catalogue(exp_params.halo_catalogue_file)
     # remove Halo's we don't want.
-    halos = llm.cull_peakpatch_catalogue(halos, exp_params.min_mass, map_obj)
+    halos = src.tools.cull_peakpatch_catalogue(halos, exp_params.min_mass, map_obj)
 
     # Add more if-statements as other observables are implemented.
     # At some point we should add some checks to make sure that a
@@ -149,7 +149,7 @@ model, observables, map_obj = set_up_mcmc(mcmc_params, experiment_params)
 get_data(mcmc_params, experiment_params, observables, model)#np.load("ps_data.npy")
 
 sampler = emcee.EnsembleSampler(mcmc_params.n_walkers, model.n_params, lnprob,
-                                args=(model, observables, map_obj))
+                                args=(model, observables, map_obj),threads=100)
 
 # starting positions (when implementing priors properly,
 # find a good way to draw the starting values from that prior.)
@@ -158,7 +158,7 @@ sampler = emcee.EnsembleSampler(mcmc_params.n_walkers, model.n_params, lnprob,
 pos = model.mcmc_walker_initial_positions(mcmc_params.prior_params[model.label], mcmc_params.n_walkers )
 samples = np.zeros((mcmc_params.n_steps,
                     mcmc_params.n_walkers,
-                    model.n_params), threads=100)
+                    model.n_params))
 
 i = 0
 with open(mcmc_chains_fp, 'w') as chains_file:

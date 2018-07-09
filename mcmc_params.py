@@ -21,7 +21,7 @@ prior_params = dict()
 ps_kbins = np.logspace(1.0, 1.5, 10)
 #vid_Tbins = np.logspace(2,3, 11)
 #ps_kbins = np.logspace(1.0, 1.5, 10)
-vid_Tbins = np.logspace(6,7, 11)
+vid_Tbins = np.logspace(10,11, 10)
 
 # Gaussian prior for white noise power spectrum
 prior_params['wn_ps'] = [
