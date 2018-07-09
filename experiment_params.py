@@ -20,7 +20,7 @@ map_smoothing = True
 #n_sigma = 5.
 
 coeffs  = None # specify None for default coeffs
-halo_catalogue_file = 'limlam_mocker/catalogues/peakpatchcatalogue_1pt4deg_z2pt4-3pt4.npz'
+halo_catalogue_file = 'catalogues/peakpatchcatalogue_1pt4deg_z2pt4-3pt4.npz'
 min_mass            = 2.5e10
 
 # field of view in degrees
