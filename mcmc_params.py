@@ -5,7 +5,7 @@ n_steps = 500
 
 # number of independent simulations of the model for each
 # step in the MCMC
-n_realizations = 10
+n_realizations = 1
 
 likelihood = 'chi_squared'
 

@@ -111,3 +111,97 @@ class PowerLawPowerSpectrum(Model):
                                     loc=p_par[0],
                                     scale=p_par[1])
         return ln_prior
+
+
+class Mhalo_to_Lco(Model):#exp_params, mcmc_params, halos):
+    # Inherit Model
+    # Model -->Mhalo_to_Lco --> Mhalo_to_Lco_model
+    def __init__(self, exp_params, model, halos, map_obj):
+        self.exp_params = exp_params
+        self.label      = model
+        self.halos      = halos
+        self.map_obj    = map_obj
+        self.coeffs     = exp_params.coeffs
+        print('hei1')
+
+    def __call__(self):
+        print('hei2')
+        dict={'Lco_test': Mhalo_to_Lco_test}
+        if self.label in dict.keys():
+            print('hei3')
+            return dict[self.label]()
+        else: 
+            sys.exit('model not in dictionary')
+'''
+'''
+class Mhalo_to_Lco_test(Model):#halos, coeffs):
+    # Inherit Mhalo_to_Lco
+    # Lco model goes here, using halo mass to calculate
+    def __init__(self, exp_params, model, halos, map_obj):
+        self.exp_params = exp_params
+        self.label      = "Lco_test"
+        self.halos      = halos
+        self.map_obj    = map_obj
+        self.coeffs     = exp_params.coeffs
+        self.n_params = 1
+
+    def mcmc_walker_initial_positions(self, prior_params, n_walkers):
+        p_par = np.transpose(prior_params)
+        mean, sigma = p_par[0], p_par[1] 
+        return mean + sigma*np.random.randn(n_walkers, len(mean))
+        
+    def ln_prior(self, model_params, prior_params):
+        ln_prior = 0.0
+        if (model_params[0] < 0.0):
+            return - np.infty
+        for m_par, p_par in zip(model_params, prior_params):
+            ln_prior += norm.logpdf(m_par,
+                                    loc=p_par[0],
+                                    scale=p_par[1])
+        return ln_prior
+
+    def calculate_Lco(self): # halos, coeffs
+        if self.coeffs == None:
+            A = 2.
+        return A*self.halos.M
+
+    def T_line(self): # map, halos
+        """
+        The line Temperature in Rayleigh-Jeans limit
+        T_line = c^2/2/kb/nuobs^2 * I_line
+
+         where the Intensity I_line = L_line/4/pi/D_L^2/dnu
+            D_L = D_p*(1+z), I_line units of L_sun/Mpc^2/Hz
+
+         T_line units of [L_sun/Mpc^2/GHz] * [(km/s)^2 / (J/K) / (GHz) ^2] * 1/sr
+            = [ 3.48e26 W/Mpc^2/GHz ] * [ 6.50966e21 s^2/K/kg ] 
+            = 2.63083e-6 K = 2.63083 muK 
+        """ 
+        halos = self.halos
+        map = self.map_obj
+        convfac = 2.63083
+        Tco     = 1./2*convfac/halos.nu**2 * halos.Lco/4/np.pi/halos.chi**2/(1+halos.redshift)**2/map.dnu/map.Ompix
+
+        return Tco
+
+    def generate_map(self, model_params): # Lco_to_map
+        # generate map
+        ### Calculate line freq from redshift
+        map = self.map_obj
+        halos = self.halos
+
+        halos.nu  = map.nu_rest/(halos.redshift+1)       
+        halos.Lco = self.calculate_Lco()
+        # Transform from Luminosity to Temperature
+        halos.Tco = self.T_line()
+
+        # flip frequency bins because np.histogram needs increasing bins
+        bins3D = [map.pix_binedges_x, map.pix_binedges_y, map.nu_binedges[::-1]]
+
+        # bin in RA, DEC, NU_obs
+        maps, edges = np.histogramdd( np.c_[halos.ra, halos.dec, halos.nu], 
+                                      bins    = bins3D,
+                                      weights = halos.Tco )
+        # flip back frequency bins
+        return maps[:,:,::-1]
+

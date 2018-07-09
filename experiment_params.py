@@ -30,4 +30,4 @@ fov_y = 1.4
 nu_rest = 115.27 # rest frame frequency of CO(1-0) transition in GHz
 nu_i    = 34.    # GHz
 nu_f    = 26.
-nmaps = 10
+nmaps = 300

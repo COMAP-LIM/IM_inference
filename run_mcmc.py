@@ -31,6 +31,10 @@ def set_up_mcmc(mcmc_params, exp_params):
 
     observables = []
     map_obj = src.MapObj.MapObj(exp_params)
+    halos, cosmo = llm.load_peakpatch_catalogue(exp_params.halo_catalogue_file)
+    # remove Halo's we don't want.
+    halos = llm.cull_peakpatch_catalogue(halos, exp_params.min_mass, map_obj)
+
     # Add more if-statements as other observables are implemented.
     # At some point we should add some checks to make sure that a
     # valid model, and a set of observables are actually picked.
@@ -44,6 +48,8 @@ def set_up_mcmc(mcmc_params, exp_params):
         model = src.Model.WhiteNoisePowerSpectrum(exp_params)
     if (mcmc_params.model == 'pl_ps'):
         model = src.Model.PowerLawPowerSpectrum(exp_params, map_obj)
+    if (mcmc_params.model =='Lco_test'):
+        model = src.Model.Mhalo_to_Lco_test(exp_params, halos, map_obj)
 
     return model, observables, map_obj
 
@@ -152,7 +158,7 @@ sampler = emcee.EnsembleSampler(mcmc_params.n_walkers, model.n_params, lnprob,
 pos = model.mcmc_walker_initial_positions(mcmc_params.prior_params[model.label], mcmc_params.n_walkers )
 samples = np.zeros((mcmc_params.n_steps,
                     mcmc_params.n_walkers,
-                    model.n_params))
+                    model.n_params), threads=100)
 
 i = 0
 with open(mcmc_chains_fp, 'w') as chains_file:
