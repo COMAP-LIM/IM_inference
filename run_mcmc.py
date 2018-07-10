@@ -20,6 +20,8 @@ import src.likelihoods
 import mcmc_params
 import experiment_params
 import emcee
+#from emcee.utils import MPIPool
+from schwimmbad import MPIPool
 import sys
 import datetime
 
@@ -148,8 +150,13 @@ model, observables, map_obj = set_up_mcmc(mcmc_params, experiment_params)
 # load mock data
 get_data(mcmc_params, experiment_params, observables, model)#np.load("ps_data.npy")
 
+pool = MPIPool()
+if not pool.is_master():
+    pool.wait()
+    sys.exit(0)
+
 sampler = emcee.EnsembleSampler(mcmc_params.n_walkers, model.n_params, lnprob,
-                                args=(model, observables, map_obj))
+                                args=(model, observables, map_obj), pool=pool)
 
 # starting positions (when implementing priors properly,
 # find a good way to draw the starting values from that prior.)

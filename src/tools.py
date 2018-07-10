@@ -140,6 +140,7 @@ def make_log_file(mcmc_log_fp, start_time):
         log_file.write('Time end of run       : %s \n'% (datetime.datetime.now()))
         log_file.write('Total execution time  : %s seconds \n' % ((datetime.datetime.now()-start_time).total_seconds() ))
         log_file.write('\n Parameters: \n'+param_file.read())
+        print('Execution time:', datetime.datetime.now()-start_time, 's')
 
 class empty_table():
     """
