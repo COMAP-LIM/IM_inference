@@ -180,6 +180,8 @@ with open(mcmc_chains_fp, 'w') as chains_file:
 samples = samples.reshape(mcmc_params.n_steps * mcmc_params.n_walkers,
                           model.n_params)
 
+pool.close()
+
 np.save(mcmc_params.samples_filename, samples)
 
 src.tools.make_log_file(mcmc_log_fp, start_time)
