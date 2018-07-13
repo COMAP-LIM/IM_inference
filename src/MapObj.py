@@ -37,15 +37,19 @@ class MapObj:
         self.pix_size_x = (self.x[-1] - self.x[0])/self.n_x
         self.pix_size_y = (self.y[-1] - self.y[0])/self.n_y
 
-        self.Ompix = (self.pix_size_x*np.pi/180)*(self.pix_size_y*np.pi/180) 
+        self.Ompix = (self.pix_size_x*np.pi/180)*(self.pix_size_y*np.pi/180)
 
-        self.pix_binedges_x = np.arange(-self.fov_x/2,self.fov_x/2+ self.pix_size_x, self.pix_size_x)
-        self.pix_binedges_y = np.arange(-self.fov_y/2,self.fov_y/2+ self.pix_size_y, self.pix_size_y)
+        self.pix_binedges_x = np.arange(-self.fov_x/2,
+                                        self.fov_x/2 + self.pix_size_x,
+                                        self.pix_size_x)
+        self.pix_binedges_y = np.arange(-self.fov_y/2,
+                                        self.fov_y/2 + self.pix_size_y,
+                                        self.pix_size_y)
 
-        self.pix_bincents_x =  0.5*(self.pix_binedges_x[:-1] + self.pix_binedges_x[:-1])
-        self.pix_bincents_y =  0.5*(self.pix_binedges_y[:-1] + self.pix_binedges_y[:-1])
+        self.pix_bincents_x = 0.5*(self.pix_binedges_x[:-1] + self.pix_binedges_x[:-1])
+        self.pix_bincents_y = 0.5*(self.pix_binedges_y[:-1] + self.pix_binedges_y[:-1])
 
-        # map frequency dimension 
+        # map frequency dimension
         # negative steps as larger observed frequency means lower redshift
         self.dnu         = (self.nu_i - self.nu_f)/(self.nmaps)
         self.nu_binedges = np.arange(self.nu_i,self.nu_f-self.dnu,-self.dnu) 
@@ -61,6 +65,5 @@ class MapObj:
             observable.calculate_observable(self)
 
     def generate_noise_map(self):
-        return self.exp_params.sigma_T*np.random.randn(self.n_x, self.n_y, self.n_z)
-        
-        
+        return self.exp_params.sigma_T*np.random.randn(self.n_x,
+                                                       self.n_y, self.n_z)

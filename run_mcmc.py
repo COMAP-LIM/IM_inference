@@ -18,14 +18,18 @@ import src.Model
 import src.Observable
 import src.likelihoods
 import mcmc_params
-import experiment_params
+import experiment_params as exp_params
 import emcee
-#from emcee.utils import MPIPool
+
 from schwimmbad import MPIPool
 import sys
+import pickle
+import copyreg
 import datetime
 
 # Perhaps move this function somewhere else ?
+
+
 def set_up_mcmc(mcmc_params, exp_params):
     """
     Sets up the different objects for the mcmc-run.
@@ -33,9 +37,11 @@ def set_up_mcmc(mcmc_params, exp_params):
 
     observables = []
     map_obj = src.MapObj.MapObj(exp_params)
-    halos, cosmo = src.tools.load_peakpatch_catalogue(exp_params.halo_catalogue_file)
+    halos, cosmo = src.tools.load_peakpatch_catalogue(
+        exp_params.halo_catalogue_file)
     # remove Halo's we don't want.
-    halos = src.tools.cull_peakpatch_catalogue(halos, exp_params.min_mass, map_obj)
+    halos = src.tools.cull_peakpatch_catalogue(
+        halos, exp_params.min_mass, map_obj)
 
     # Add more if-statements as other observables are implemented.
     # At some point we should add some checks to make sure that a
@@ -50,7 +56,7 @@ def set_up_mcmc(mcmc_params, exp_params):
         model = src.Model.WhiteNoisePowerSpectrum(exp_params)
     if (mcmc_params.model == 'pl_ps'):
         model = src.Model.PowerLawPowerSpectrum(exp_params, map_obj)
-    if (mcmc_params.model =='Lco_test'):
+    if (mcmc_params.model == 'Lco_test'):
         model = src.Model.Mhalo_to_Lco_test(exp_params, halos, map_obj)
 
     return model, observables, map_obj
@@ -67,7 +73,6 @@ def insert_data(data, observables):
         for observable in observables:
             # remove "item()"" here if data is dict (and not gotten from file)
             observable.data = data.item()[observable.label]
-
 
 
 def lnprob(model_params, model, observables, map_obj):
@@ -87,7 +92,8 @@ def lnprob(model_params, model, observables, map_obj):
         return -np.infty
 
     for i in range(mcmc_params.n_realizations):
-        map_obj.map = model.generate_map(model_params) + map_obj.generate_noise_map()
+        map_obj.map = model.generate_map(
+            model_params) + map_obj.generate_noise_map()
         map_obj.calculate_observables(observables)
         for observable in observables:
             observable.add_observable_to_sum()
@@ -114,12 +120,12 @@ def get_data(mcmc_params, exp_params, observables, model):
 
     if mcmc_params.generate_file != True:
         print('opening map data file')
-        map_obj.map=np.load(mcmc_params.map_filename)
-       
+        map_obj.map = np.load(mcmc_params.map_filename)
 
     else:
         model_params = mcmc_params.model_params_true[model.label]
-        map_obj.map = model.generate_map(model_params) + map_obj.generate_noise_map()
+        map_obj.map = model.generate_map(
+            model_params) + map_obj.generate_noise_map()
         if mcmc_params.save_file:
             print('saving map to file')
             np.save(mcmc_params.map_filename, map_obj.map)
@@ -135,34 +141,53 @@ def get_data(mcmc_params, exp_params, observables, model):
             print('some of data values are equal to 0')
             sys.exit()
 
-    #print(data.item()['ps'])
+    # print(data.item()['ps'])
 
     insert_data(data, observables)
 
-        
     return data
 
-start_time = datetime.datetime.now()
-mcmc_chains_fp, mcmc_log_fp = src.tools.make_log_file_handles(mcmc_params.output_dir)
 
-model, observables, map_obj = set_up_mcmc(mcmc_params, experiment_params)
+def reduce_mod(m):
+    assert sys.modules[m.__name__] is m
+    return rebuild_mod, (m.__name__,)
+
+
+def rebuild_mod(name):
+    __import__(name)
+    return sys.modules[name]
+
+def make_picklable(exp_params, mcmc_params):
+    # make parameter files pickable
+    copyreg.pickle(type(exp_params), reduce_mod)
+    copyreg.pickle(type(mcmc_params), reduce_mod)
+
+
+start_time = datetime.datetime.now()
+mcmc_chains_fp, mcmc_log_fp = src.tools.make_log_file_handles(
+    mcmc_params.output_dir)
+src.tools.make_picklable(exp_params, mcmc_params)
+
+model, observables, map_obj = set_up_mcmc(mcmc_params, exp_params)
 
 # load mock data
-get_data(mcmc_params, experiment_params, observables, model)#np.load("ps_data.npy")
+get_data(mcmc_params, exp_params, observables,
+         model)  # np.load("ps_data.npy")
 
-pool = MPIPool()
-if not pool.is_master():
-    pool.wait()
-    sys.exit(0)
+# with MPIPool() as pool:
+#    if not pool.is_master():
+#        pool.wait()
+#        sys.exit(0)
 
 sampler = emcee.EnsembleSampler(mcmc_params.n_walkers, model.n_params, lnprob,
-                                args=(model, observables, map_obj), pool=pool)
+                                args=(model, observables, map_obj), threads=15)  # , pool=pool)
 
 # starting positions (when implementing priors properly,
 # find a good way to draw the starting values from that prior.)
-#pos = np.array([6.5, 3.0]) + np.random.randn(mcmc_params.n_walkers,
+# pos = np.array([6.5, 3.0]) + np.random.randn(mcmc_params.n_walkers,
 #                                             model.n_params)
-pos = model.mcmc_walker_initial_positions(mcmc_params.prior_params[model.label], mcmc_params.n_walkers )
+pos = model.mcmc_walker_initial_positions(
+    mcmc_params.prior_params[model.label], mcmc_params.n_walkers)
 samples = np.zeros((mcmc_params.n_steps,
                     mcmc_params.n_walkers,
                     model.n_params))
@@ -174,13 +199,12 @@ with open(mcmc_chains_fp, 'w') as chains_file:
         for result in sampler.sample(pos, iterations=1, storechain=True):
             samples[i], _, blobs = result
             pos = samples[i]
-            chains_file.write(str(samples[0])+'\n')
+            chains_file.write(str(samples[0]) + '\n')
             i += 1
 
 samples = samples.reshape(mcmc_params.n_steps * mcmc_params.n_walkers,
                           model.n_params)
 
-pool.close()
 
 np.save(mcmc_params.samples_filename, samples)
 

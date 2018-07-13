@@ -12,7 +12,6 @@ class Observable:
     def __init__(self):
         self.sum = None
 
-
     def calculate_observable(self, map):
         pass
 
@@ -39,10 +38,12 @@ class Power_Spectrum(Observable):
 
     def calculate_observable(self, map_obj):
         self.values, self.dk, self.n_modes = \
-            src.tools.calculate_power_spec_3d(map_obj, self.mcmc_params.ps_kbins)
+            src.tools.calculate_power_spec_3d(map_obj,
+                                              self.mcmc_params.ps_kbins)
 
     def independent_variance(self):
         self.independent_var = self.mean / np.sqrt(self.n_modes)
+
 
 class Voxel_Intensity_Distribution(Observable):
     def __init__(self, mcmc_params):

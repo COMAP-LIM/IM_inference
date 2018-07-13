@@ -14,7 +14,7 @@ observables = ('ps', 'vid')
 #observables =('vid')
 #model = 'wn_ps'
 #model = 'pl_ps'
-model 	 = 'Lco_test'
+model = 'Lco_test'
 
 prior_params = dict()
 
@@ -41,9 +41,9 @@ prior_params['Lco_test'] = [
 
 
 model_params_true = dict()
-model_params_true['wn_ps'] = [8.3] #sigma_T for wn_ps
-model_params_true['pl_ps'] = [8., 2.] # A and alpha for pw_ps
-model_params_true['Lco_test'] = [2.] # linear model
+model_params_true['wn_ps'] = [8.3]  # sigma_T for wn_ps
+model_params_true['pl_ps'] = [8., 2.]  # A and alpha for pw_ps
+model_params_true['Lco_test'] = [2.]  # linear model
 
 map_filename = 'trial2.npy'
 samples_filename = 'samples_lco_test2.npy'
