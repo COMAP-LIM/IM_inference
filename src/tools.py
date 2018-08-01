@@ -49,9 +49,9 @@ def calculate_power_spec_3d(map_obj, k_bin=None):
     # dk = (np.sqrt(np.sqrt(map_obj.dx * map_obj.dy * map_obj.dz))
     #      / np.sqrt(map_obj.volume))
 
-    kx = np.fft.fftfreq(map_obj.n_x, d=map_obj.dx) * 2 * np.pi
-    ky = np.fft.fftfreq(map_obj.n_y, d=map_obj.dy) * 2 * np.pi
-    kz = np.fft.fftfreq(map_obj.n_z, d=map_obj.dz) * 2 * np.pi
+    kx = np.fft.fftfreq(map_obj.n_x, d=map_obj.dx) * 2*np.pi
+    ky = np.fft.fftfreq(map_obj.n_y, d=map_obj.dy) * 2*np.pi
+    kz = np.fft.fftfreq(map_obj.n_z, d=map_obj.dz) * 2*np.pi
     kgrid = np.sqrt(sum(ki**2 for ki in np.meshgrid(kx, ky, kz,
                                                     indexing='ij')))
 
@@ -63,7 +63,8 @@ def calculate_power_spec_3d(map_obj, k_bin=None):
 
     fft_map = fft.fftn(map_obj.map) / (map_obj.n_x * map_obj.n_y * map_obj.n_z)
     #fft_map = fft.fftshift(fft_map)
-    ps = np.abs(fft_map) ** 2 * map_obj.volume
+    ps = np.abs(fft_map)**2 * map_obj.volume
+
     Pk_modes = np.histogram(
         kgrid[kgrid > 0], bins=k_bin, weights=ps[kgrid > 0])[0]
     nmodes, k_edges = np.histogram(kgrid[kgrid > 0], bins=k_bin)
@@ -89,7 +90,6 @@ def calculate_vid(map_obj, T_bin=None):
     except ValueError:
         print('wrong')
         sys.exit()
-        # print(map_obj.map)
 
 
 def gaussian_kernel(sigma_x, sigma_y, n_sigma=5.0):
@@ -181,19 +181,12 @@ def load_peakpatch_catalogue(filein):
         Contains all cosmology information (Omega_i, sigme_8, etc)
     """
     halos = empty_table()            # creates empty class to put any halo info into
-    cosmo = empty_table()            # creates empty class to put any cosmology info into
 
     halo_info = np.load(filein)
     #if debug.verbose: print("\thalo catalogue contains:\n\t\t", halo_info.files)
 
     # get cosmology from halo catalogue
     params_dict = halo_info['cosmo_header'][()]
-    cosmo.Omega_M = params_dict.get('Omega_M')
-    cosmo.Omega_B = params_dict.get('Omega_B')
-    cosmo.Omega_L = params_dict.get('Omega_L')
-    cosmo.h = params_dict.get('h')
-    cosmo.ns = params_dict.get('ns')
-    cosmo.sigma8 = params_dict.get('sigma8')
 
     # if the halo catalogue is not centered along the z axis
     cen_x_fov = params_dict.get('cen_x_fov', 0.)
@@ -217,14 +210,8 @@ def load_peakpatch_catalogue(filein):
     halos.dec = np.arcsin(halos.y_pos / halos.chi) * 180. / np.pi - cen_y_fov
 
     assert np.max(halos.M) < 1.e17, "Halos seem too massive"
-    assert np.max(halos.redshift) < 4., (
-            "need to change max redshift interpolation in tools.py")
-    assert (cosmo.Omega_M + cosmo.Omega_L) == 1., (
-            "Does not seem to be flat universe cosmology")
 
-    #if debug.verbose: print('\n\t%d halos loaded' % halos.nhalo)
-
-    return halos, cosmo
+    return halos
 
 
 def cull_peakpatch_catalogue(halos, min_mass, mapinst):

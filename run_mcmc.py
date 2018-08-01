@@ -11,7 +11,6 @@ to a set of observables) and constrain the model
 parameters of some IM-model.
 """
 import numpy as np
-from scipy.stats import norm
 import src.MapObj
 import src.tools
 import src.Model
@@ -21,12 +20,13 @@ import mcmc_params
 import experiment_params as exp_params
 import emcee
 
-from schwimmbad import MPIPool
+#from schwimmbad import MPIPool
+#from multiprocessing import Pool
 import sys
-import pickle
-import copyreg
+import os
 import datetime
 
+os.environ["OMP_NUM_THREADS"] = "1"
 # Perhaps move this function somewhere else ?
 
 
@@ -37,11 +37,6 @@ def set_up_mcmc(mcmc_params, exp_params):
 
     observables = []
     map_obj = src.MapObj.MapObj(exp_params)
-    halos, cosmo = src.tools.load_peakpatch_catalogue(
-        exp_params.halo_catalogue_file)
-    # remove Halo's we don't want.
-    halos = src.tools.cull_peakpatch_catalogue(
-        halos, exp_params.min_mass, map_obj)
 
     # Add more if-statements as other observables are implemented.
     # At some point we should add some checks to make sure that a
@@ -57,6 +52,12 @@ def set_up_mcmc(mcmc_params, exp_params):
     if (mcmc_params.model == 'pl_ps'):
         model = src.Model.PowerLawPowerSpectrum(exp_params, map_obj)
     if (mcmc_params.model == 'Lco_test'):
+        halos = src.tools.load_peakpatch_catalogue(
+                           exp_params.halo_catalogue_file)
+        # remove Halo's we don't want.
+        halos = src.tools.cull_peakpatch_catalogue(
+                    halos, exp_params.min_mass, map_obj)
+
         model = src.Model.Mhalo_to_Lco_test(exp_params, halos, map_obj)
 
     return model, observables, map_obj
@@ -118,7 +119,7 @@ def lnprob(model_params, model, observables, map_obj):
 
 def get_data(mcmc_params, exp_params, observables, model):
 
-    if mcmc_params.generate_file != True:
+    if not mcmc_params.generate_file:
         print('opening map data file')
         map_obj.map = np.load(mcmc_params.map_filename)
 
@@ -136,7 +137,7 @@ def get_data(mcmc_params, exp_params, observables, model):
 
     for observable in observables:
         data[observable.label] = observable.values
-        print(observable.values)
+        print(observable.label, observable.values)
         if 0 in observable.values:
             print('some of data values are equal to 0')
             sys.exit()
@@ -146,21 +147,6 @@ def get_data(mcmc_params, exp_params, observables, model):
     insert_data(data, observables)
 
     return data
-
-
-def reduce_mod(m):
-    assert sys.modules[m.__name__] is m
-    return rebuild_mod, (m.__name__,)
-
-
-def rebuild_mod(name):
-    __import__(name)
-    return sys.modules[name]
-
-def make_picklable(exp_params, mcmc_params):
-    # make parameter files pickable
-    copyreg.pickle(type(exp_params), reduce_mod)
-    copyreg.pickle(type(mcmc_params), reduce_mod)
 
 
 start_time = datetime.datetime.now()
@@ -180,7 +166,7 @@ get_data(mcmc_params, exp_params, observables,
 #        sys.exit(0)
 
 sampler = emcee.EnsembleSampler(mcmc_params.n_walkers, model.n_params, lnprob,
-                                args=(model, observables, map_obj), threads=15)  # , pool=pool)
+                                args=(model, observables, map_obj), threads=144)  # , pool=pool)
 
 # starting positions (when implementing priors properly,
 # find a good way to draw the starting values from that prior.)
@@ -199,7 +185,7 @@ with open(mcmc_chains_fp, 'w') as chains_file:
         for result in sampler.sample(pos, iterations=1, storechain=True):
             samples[i], _, blobs = result
             pos = samples[i]
-            chains_file.write(str(samples[0]) + '\n')
+            chains_file.write('\n'.join([str(item) for sublist in pos for item in sublist])+'\n')
             i += 1
 
 samples = samples.reshape(mcmc_params.n_steps * mcmc_params.n_walkers,

@@ -3,7 +3,6 @@ from scipy.stats import norm
 import src.tools
 import sys
 
-
 class Model:
     """
     Parent class for Intensity mapping models. A model is here
@@ -129,13 +128,16 @@ class Mhalo_to_Lco_test(Model):
         self.label = "Lco_test"
         self.halos = halos
         self.map_obj = map_obj
-        self.coeffs = exp_params.coeffs
         self.n_params = 1
 
     def mcmc_walker_initial_positions(self, prior_params, n_walkers):
         p_par = np.transpose(prior_params)
-        mean, sigma = p_par[0], p_par[1]
-        return mean + sigma * np.random.randn(n_walkers, len(mean))
+        mean, sigma = p_par[0], p_par[0]
+
+        # Either take abs or redraw until positive value
+        init_pos = np.abs(mean + sigma * np.random.randn(n_walkers, len(mean)))
+
+        return init_pos
 
     def ln_prior(self, model_params, prior_params):
         ln_prior = 0.0
@@ -147,10 +149,14 @@ class Mhalo_to_Lco_test(Model):
                                     scale=p_par[1])
         return ln_prior
 
-    def calculate_Lco(self):  # halos, coeffs
-        if self.coeffs is None:
-            A = 2.
-        return A * self.halos.M
+    def calculate_Lco(self, coeffs=None):  # halos, coeffs
+        """
+        Luminosity in units of L_sun
+        Default coefficients taken from Pullen et al. 2013
+        """
+        if coeffs is None:
+            coeffs = 1e6/5e11
+        return coeffs * self.halos.M
 
     def T_line(self):  # map, halos
         """
@@ -165,31 +171,36 @@ class Mhalo_to_Lco_test(Model):
             = 2.63083e-6 K = 2.63083 muK
         """
         halos = self.halos
-        map = self.map_obj
+        map_obj = self.map_obj
         convfac = 2.63083
         Tco = 1. / 2 * convfac / halos.nu**2 * halos.Lco / 4 / np.pi / \
-            halos.chi**2 / (1 + halos.redshift)**2 / map.dnu / map.Ompix
+            halos.chi**2 / (1 + halos.redshift)**2 / map_obj.dnu / map_obj.Ompix
 
         return Tco
 
     def generate_map(self, model_params):  # Lco_to_map
         # generate map
         # Calculate line freq from redshift
-        map = self.map_obj
+        map_obj = self.map_obj
         halos = self.halos
 
-        halos.nu = map.nu_rest / (halos.redshift + 1)
-        halos.Lco = self.calculate_Lco()
+        halos.nu = map_obj.nu_rest / (halos.redshift + 1)
+        halos.Lco = self.calculate_Lco(model_params[0])
         # Transform from Luminosity to Temperature
         halos.Tco = self.T_line()
 
         # flip frequency bins because np.histogram needs increasing bins
-        bins3D = [map.pix_binedges_x,
-                  map.pix_binedges_y, map.nu_binedges[::-1]]
+        bins3D = [map_obj.pix_binedges_x,
+                  map_obj.pix_binedges_y, map_obj.nu_binedges[::-1]]
 
         # bin in RA, DEC, NU_obs
         maps, edges = np.histogramdd(np.c_[halos.ra, halos.dec, halos.nu],
                                      bins=bins3D,
                                      weights=halos.Tco)
+        if self.exp_params.map_smoothing:
+            return src.tools.gaussian_smooth(
+                            maps[:, :, ::-1], self.exp_params.sigma_x,
+                            self.exp_params.sigma_y, n_sigma=5.0)
+
         # flip back frequency bins
         return maps[:, :, ::-1]
