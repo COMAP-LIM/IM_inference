@@ -2,6 +2,8 @@ import numpy as np
 from scipy.stats import norm
 import src.tools
 import sys
+import warnings
+import matplotlib.pyplot as plt
 
 class Model:
     """
@@ -76,14 +78,13 @@ class PowerLawPowerSpectrum(Model):
         return A * k**alpha
 
     def generate_map(self, model_params):
-        #A, alpha = model_param
         n_x = self.map_obj.n_x
         n_y = self.map_obj.n_y
         n_z = self.map_obj.n_z
 
-        kx = np.fft.fftfreq(n_x, d=self.map_obj.dx) * 2 * np.pi
-        ky = np.fft.fftfreq(n_y, d=self.map_obj.dy) * 2 * np.pi
-        kz = np.fft.fftfreq(n_z, d=self.map_obj.dz) * 2 * np.pi
+        kx = np.fft.fftfreq(n_x, d=self.map_obj.dx) * 2*np.pi
+        ky = np.fft.fftfreq(n_y, d=self.map_obj.dy) * 2*np.pi
+        kz = np.fft.fftfreq(n_z, d=self.map_obj.dz) * 2*np.pi
         kgrid = np.sqrt(
             sum(ki**2 for ki in np.meshgrid(kx, ky, kz, indexing='ij')))
 
@@ -121,11 +122,11 @@ class PowerLawPowerSpectrum(Model):
         return ln_prior
 
 
-class Mhalo_to_Lco_test(Model):
+class Mhalo_to_Lco_Pullen(Model):
 
     def __init__(self, exp_params, halos, map_obj):
         self.exp_params = exp_params
-        self.label = "Lco_test"
+        self.label = 'Lco_Pullen'
         self.halos = halos
         self.map_obj = map_obj
         self.n_params = 1
@@ -135,28 +136,38 @@ class Mhalo_to_Lco_test(Model):
         mean, sigma = p_par[0], p_par[0]
 
         # Either take abs or redraw until positive value
-        init_pos = np.abs(mean + sigma * np.random.randn(n_walkers, len(mean)))
+        init_pos = mean + sigma * np.random.randn(n_walkers, len(mean))
 
         return init_pos
 
     def ln_prior(self, model_params, prior_params):
         ln_prior = 0.0
-        if (model_params[0] < 0.0):
-            return - np.infty
         for m_par, p_par in zip(model_params, prior_params):
             ln_prior += norm.logpdf(m_par,
                                     loc=p_par[0],
                                     scale=p_par[1])
         return ln_prior
 
-    def calculate_Lco(self, coeffs=None):  # halos, coeffs
+    def calculate_Lco(self, model_param=None):  # halos, coeffs
         """
-        Luminosity in units of L_sun
+        Luminosity in units of L_sun, halos mass in units of M_sun
+        Coefficients in units of L_sun/M_sun
         Default coefficients taken from Pullen et al. 2013
         """
-        if coeffs is None:
-            coeffs = 1e6/5e11
-        return coeffs * self.halos.M
+        #numpy.seterr(all='warn')
+        #warnings.filterwarnings('error')
+
+        if model_param is None:
+            model_param = np.log10(1e6/5e11)
+
+        #with np.errstate(over='raise'):
+        try:
+            Lco = 10**model_param * self.halos.M
+        except OverflowError as err:
+            print('MODEL PARAM:',model_param)
+            sys.exit()
+        #print(model_param)
+        return 10**model_param * self.halos.M
 
     def T_line(self):  # map, halos
         """
@@ -166,16 +177,22 @@ class Mhalo_to_Lco_test(Model):
          where the Intensity I_line = L_line/4/pi/D_L^2/dnu
             D_L = D_p*(1+z), I_line units of L_sun/Mpc^2/Hz
 
-         T_line units of [L_sun/Mpc^2/GHz] * [(km/s)^2 / (J/K) / (GHz) ^2] * 1/sr
+         T_line units of [L_sun/Mpc^2/GHz] * [(km/s)^2 / (J/K) / (GHz)^2]*1/sr
             = [ 3.48e26 W/Mpc^2/GHz ] * [ 6.50966e21 s^2/K/kg ]
             = 2.63083e-6 K = 2.63083 muK
         """
         halos = self.halos
         map_obj = self.map_obj
         convfac = 2.63083
-        Tco = 1. / 2 * convfac / halos.nu**2 * halos.Lco / 4 / np.pi / \
-            halos.chi**2 / (1 + halos.redshift)**2 / map_obj.dnu / map_obj.Ompix
+        #print('lum', halos.Lco)
+        #print('nu', halos.nu)
 
+        Tco = 1./2 * convfac/halos.nu**2 * halos.Lco / 4/np.pi / \
+            halos.chi**2/(1 + halos.redshift)**2/map_obj.dnu/map_obj.Ompix
+        #print('Tco', Tco)
+        #plt.plot(self.map_obj.z_array, Tco[:len(map_obj.z_array)])
+        #plt.show()
+        #sys.exit()
         return Tco
 
     def generate_map(self, model_params):  # Lco_to_map
@@ -197,10 +214,11 @@ class Mhalo_to_Lco_test(Model):
         maps, edges = np.histogramdd(np.c_[halos.ra, halos.dec, halos.nu],
                                      bins=bins3D,
                                      weights=halos.Tco)
+
+        # flip back frequency bins
         if self.exp_params.map_smoothing:
             return src.tools.gaussian_smooth(
                             maps[:, :, ::-1], self.exp_params.sigma_x,
                             self.exp_params.sigma_y, n_sigma=5.0)
 
-        # flip back frequency bins
         return maps[:, :, ::-1]

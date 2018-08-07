@@ -14,14 +14,14 @@ observables = ('ps', 'vid')
 #observables =('vid')
 #model = 'wn_ps'
 #model = 'pl_ps'
-model = 'Lco_test'
+model = 'Lco_Pullen'
 
 prior_params = dict()
 
-#ps_kbins = np.logspace(1.0, 1.5, 10)
+#ps_kbins = np.logspace(1, 2, 10)
 #vid_Tbins = np.logspace(2,3, 11)
-ps_kbins = np.logspace(-2, -0.1, 10)
-vid_Tbins = np.logspace(0,2, 10)
+ps_kbins = np.logspace(-1.5, -0.1, 10)
+vid_Tbins = np.logspace(5.5, 6.7, 10)
 #vid_Tbins = np.logspace(5.7, 8, 10)  # Lco, 10x10x10
 
 # Gaussian prior for white noise power spectrum
@@ -36,19 +36,19 @@ prior_params['pl_ps'] = [
 ]
 
 # Gaussian prior for linear L_CO model
-prior_params['Lco_test'] = [
+prior_params['Lco_Pullen'] = [
     #[3, 2]
-    [4e-5, 2]  # A
+    [np.log10(4e-5), 1.7]  # A
 ]
 
 
 model_params_true = dict()
 model_params_true['wn_ps'] = [8.3]  # sigma_T for wn_ps
 model_params_true['pl_ps'] = [8., 2.]  # A and alpha for pw_ps
-model_params_true['Lco_test'] = [1e6/5e11]  # linear model, specify None for default coeffs
+model_params_true['Lco_Pullen'] = [np.log10(1e6/5e11)]  # linear model, specify None for default coeffs
 
 map_filename = 'trial2.npy'
-samples_filename = 'samples_lco_test1.npy'
+samples_filename = 'samples_lco_test2.npy'
 
 output_dir = 'testing_output'
 generate_file = True

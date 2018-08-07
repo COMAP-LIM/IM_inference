@@ -15,9 +15,9 @@ import shutil
 def angular_average_3d(inmap, x, y, z, dr, x0=0, y0=0, z0=0):
     x_ind, y_ind, z_ind = np.indices(inmap.shape)
 
-    r = np.sqrt((x[x_ind] - x0) ** 2 +
-                (y[y_ind] - y0) ** 2 +
-                (z[z_ind] - z0) ** 2)
+    r = np.sqrt((x[x_ind] - x0)**2 +
+                (y[y_ind] - y0)**2 +
+                (z[z_ind] - z0)**2)
 
     # np.hypot(x[x_ind] - x0, y[y_ind] - y0, z[z_ind] - z0)
     # Get sorted radii
@@ -67,27 +67,30 @@ def calculate_power_spec_3d(map_obj, k_bin=None):
 
     Pk_modes = np.histogram(
         kgrid[kgrid > 0], bins=k_bin, weights=ps[kgrid > 0])[0]
-    nmodes, k_edges = np.histogram(kgrid[kgrid > 0], bins=k_bin)
+    nmodes, k_binedges = np.histogram(kgrid[kgrid > 0], bins=k_bin)
 
     Pk = Pk_modes
     Pk[np.where(nmodes > 0)] = Pk_modes[np.where(
         nmodes > 0)] / nmodes[np.where(nmodes > 0)]
-    k_array = (k_edges[1:] + k_edges[:-1]) / 2.
+    k_bincents = (k_binedges[1:] + k_binedges[:-1]) / 2.
 
     # angular_average_3d(ps, map_obj.fx, map_obj.fy, map_obj.fz, dk)
-    return Pk, k_array, nmodes
+    return Pk, k_bincents, nmodes
 
 
 def calculate_vid(map_obj, T_bin=None):
 
     if T_bin is None:
-        T_bin = np.linspace(np.amin(map_obj.map), np.amax(
-            map_obj.map), np.amax(map_obj.map) + 1)
+        T_bin = np.linspace(np.amin(map_obj.map), np.amax(map_obj.map),
+                            np.amax(map_obj.map) + 1)
     try:
         B_val, T_edges = np.histogram(map_obj.map.flatten(), bins=T_bin)
+        B_val[np.where(B_val == 0)]= 1e-3
         T_array = (T_edges[1:] + T_edges[:-1]) / 2.
         return B_val, T_array
     except ValueError:
+        print('T_bin=', T_bin)
+        print('map=', map_obj.map)
         print('wrong')
         sys.exit()
 
@@ -96,8 +99,7 @@ def gaussian_kernel(sigma_x, sigma_y, n_sigma=5.0):
     size_y = int(n_sigma * sigma_y)
     size_x = int(n_sigma * sigma_x)
     y, x = scipy.mgrid[-size_y:size_y + 1, -size_x:size_x + 1]
-    g = np.exp(-(x ** 2 / (2. * sigma_x ** 2) + y ** 2 / (2. * sigma_y
-                                                          ** 2)))
+    g = np.exp(-(x**2/(2.*sigma_x**2) + y**2/(2.*sigma_y**2)))
     return g / g.sum()
 
 
@@ -126,33 +128,30 @@ def make_log_file_handles(output_dir):
             'mcmc_params_run{0:d}.py'.format(runid))):
         runid += 1
 
-    mcmc_params_fp = os.path.join(
-        output_dir, 'params',
-        'mcmc_params_run{0:d}.py'.format(runid))
-    exp_params_fp = os.path.join(
-        output_dir, 'params',
-        'experiment_params_run{0:d}.py'.format(runid))
-    mcmc_chains_fp = os.path.join(
-        output_dir, 'chains',
-        'mcmc_chains_run{0:d}.dat'.format(runid))
-    mcmc_log_fp = os.path.join(
-        output_dir, 'log_files',
-        'mcmc_log_run{0:d}.txt'.format(runid))
+    mcmc_params_fp = os.path.join(output_dir, 'params',
+                                  'mcmc_params_run{0:d}.py'.format(runid))
+    exp_params_fp = os.path.join(output_dir, 'params',
+                                 'experiment_params_run{0:d}.py'.format(runid))
+    mcmc_chains_fp = os.path.join(output_dir, 'chains',
+                                  'mcmc_chains_run{0:d}.dat'.format(runid))
+    mcmc_log_fp = os.path.join(output_dir, 'log_files',
+                               'mcmc_log_run{0:d}.txt'.format(runid))
 
     shutil.copy2('mcmc_params.py', mcmc_params_fp)
     shutil.copy2('experiment_params.py', exp_params_fp)
     return mcmc_chains_fp, mcmc_log_fp
 
 
-def make_log_file(mcmc_log_fp, start_time):
-    with open(mcmc_log_fp, 'w') as log_file, open('mcmc_params.py', 'r') as param_file:
+def write_log_file(mcmc_log_fp, start_time):
+    with open(mcmc_log_fp, 'w') as log_file, \
+            open('mcmc_params.py', 'r') as param_file:
         log_file.write('Time start of run     : %s \n' % (start_time))
         log_file.write('Time end of run       : %s \n' %
                        (datetime.datetime.now()))
         log_file.write('Total execution time  : %s seconds \n' % (
                        (datetime.datetime.now() - start_time).total_seconds()))
         log_file.write('\n Parameters: \n' + param_file.read())
-        print('Execution time:', datetime.datetime.now() - start_time, 's')
+        print('Execution time:', datetime.datetime.now() - start_time)
 
 
 class empty_table():
@@ -177,13 +176,10 @@ def load_peakpatch_catalogue(filein):
     -------
     halos : class
         Contains all halo information (position, redshift, etc..)
-    cosmo : class
-        Contains all cosmology information (Omega_i, sigme_8, etc)
     """
     halos = empty_table()            # creates empty class to put any halo info into
 
     halo_info = np.load(filein)
-    #if debug.verbose: print("\thalo catalogue contains:\n\t\t", halo_info.files)
 
     # get cosmology from halo catalogue
     params_dict = halo_info['cosmo_header'][()]
@@ -206,8 +202,8 @@ def load_peakpatch_catalogue(filein):
     halos.nhalo = len(halos.M)
 
     halos.chi = np.sqrt(halos.x_pos**2 + halos.y_pos**2 + halos.z_pos**2)
-    halos.ra = np.arctan2(-halos.x_pos, halos.z_pos) * 180. / np.pi - cen_x_fov
-    halos.dec = np.arcsin(halos.y_pos / halos.chi) * 180. / np.pi - cen_y_fov
+    halos.ra = np.arctan2(-halos.x_pos, halos.z_pos) * 180./np.pi - cen_x_fov
+    halos.dec = np.arcsin(halos.y_pos / halos.chi) * 180./np.pi - cen_y_fov
 
     assert np.max(halos.M) < 1.e17, "Halos seem too massive"
 
@@ -231,8 +227,6 @@ def cull_peakpatch_catalogue(halos, min_mass, mapinst):
         except TypeError:
             pass
     halos.nhalo = len(halos.M)
-
-    #if debug.verbose: print('\n\t%d halos remain after mass/map cut' % halos.nhalo)
 
     return halos
 
