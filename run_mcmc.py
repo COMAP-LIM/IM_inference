@@ -21,7 +21,8 @@ import experiment_params as exp_params
 import emcee
 
 #from schwimmbad import MPIPool
-#from multiprocessing import Pool
+from emcee.utils import MPIPool
+from multiprocessing import Pool
 import sys
 import os
 import datetime
@@ -29,14 +30,22 @@ import datetime
 os.environ["OMP_NUM_THREADS"] = "1"
 # Perhaps move this function somewhere else ?
 
-
+#print('running')
+#print(mcmc_params.model_params_true['Lco_test'])
 def set_up_mcmc(mcmc_params, exp_params):
     """
     Sets up the different objects for the mcmc-run.
     """
 
     observables = []
-    map_obj = src.MapObj.MapObj(exp_params)
+    model_name = mcmc_params.model
+    halos, cosmo = src.tools.load_peakpatch_catalogue(
+                        exp_params.halo_catalogue_file)
+    map_obj = src.MapObj.MapObj(exp_params, cosmo)
+
+    # remove Halo's we don't want.
+    halos = src.tools.cull_peakpatch_catalogue(
+                halos, exp_params.min_mass, map_obj)
 
     # Add more if-statements as other observables are implemented.
     # At some point we should add some checks to make sure that a
@@ -47,18 +56,16 @@ def set_up_mcmc(mcmc_params, exp_params):
     if 'vid' in mcmc_params.observables:
         vid = src.Observable.Voxel_Intensity_Distribution(mcmc_params)
         observables.append(vid)
+
     if (mcmc_params.model == 'wn_ps'):
         model = src.Model.WhiteNoisePowerSpectrum(exp_params)
     if (mcmc_params.model == 'pl_ps'):
         model = src.Model.PowerLawPowerSpectrum(exp_params, map_obj)
-    if (mcmc_params.model == 'Lco_test'):
-        halos = src.tools.load_peakpatch_catalogue(
-                           exp_params.halo_catalogue_file)
-        # remove Halo's we don't want.
-        halos = src.tools.cull_peakpatch_catalogue(
-                    halos, exp_params.min_mass, map_obj)
 
-        model = src.Model.Mhalo_to_Lco_test(exp_params, halos, map_obj)
+    if (mcmc_params.model == 'Lco_Pullen'):
+        model = src.Model.Mhalo_to_Lco_Pullen(exp_params, halos, map_obj)
+    if (mcmc_params.model == 'Lco_Li'):
+        model = src.Model.Mhalo_to_Lco_Li(exp_params, halos, map_obj)
 
     return model, observables, map_obj
 
@@ -91,7 +98,6 @@ def lnprob(model_params, model, observables, map_obj):
                                mcmc_params.prior_params[model.label])
     if not np.isfinite(ln_prior):
         return -np.infty
-
     for i in range(mcmc_params.n_realizations):
         map_obj.map = model.generate_map(
             model_params) + map_obj.generate_noise_map()
@@ -160,13 +166,13 @@ model, observables, map_obj = set_up_mcmc(mcmc_params, exp_params)
 get_data(mcmc_params, exp_params, observables,
          model)  # np.load("ps_data.npy")
 
-# with MPIPool() as pool:
-#    if not pool.is_master():
-#        pool.wait()
-#        sys.exit(0)
+#pool = MPIPool(loadbalance=True)
+#if not pool.is_master():
+#    pool.wait()
+#    sys.exit(0)
 
 sampler = emcee.EnsembleSampler(mcmc_params.n_walkers, model.n_params, lnprob,
-                                args=(model, observables, map_obj), threads=144)  # , pool=pool)
+                                args=(model, observables, map_obj), threads=144)#, pool=pool)
 
 # starting positions (when implementing priors properly,
 # find a good way to draw the starting values from that prior.)
@@ -182,16 +188,18 @@ i = 0
 with open(mcmc_chains_fp, 'w') as chains_file:
     while i < mcmc_params.n_steps:
         print('undergoing iteration {0}'.format(i))
+        sys.stdout.flush()
         for result in sampler.sample(pos, iterations=1, storechain=True):
             samples[i], _, blobs = result
             pos = samples[i]
             chains_file.write('\n'.join([str(item) for sublist in pos for item in sublist])+'\n')
             i += 1
 
+#pool.close()
 samples = samples.reshape(mcmc_params.n_steps * mcmc_params.n_walkers,
                           model.n_params)
 
 
 np.save(mcmc_params.samples_filename, samples)
 
-src.tools.make_log_file(mcmc_log_fp, start_time)
+src.tools.write_log_file(mcmc_log_fp, start_time)

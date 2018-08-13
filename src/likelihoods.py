@@ -6,5 +6,9 @@ def ln_chi_squared(data, avg, sigma):
     #print('sigma', sigma)
     #sys.exit()
 
-    like = -1.0 / 2 * np.sum((data - avg) ** 2 / (2 * sigma ** 2))
+    #square1 = (data - avg) ** 2
+    #square2 = (2 * sigma ** 2)
+    #like = -1.0 / 2 * np.sum(square1 / square2)
+
+    like = -1.0 / 2 * np.sum(1./2*((data - avg) / sigma)**2)
     return like

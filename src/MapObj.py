@@ -1,5 +1,7 @@
 import numpy as np
-import astropy.cosmology
+#import astropy.cosmology
+from astropy.cosmology import FlatLambdaCDM
+from astropy import units as u
 import sys
 
 class MapObj:
@@ -9,10 +11,12 @@ class MapObj:
     Should in the future also contain info about pixel size, FWHM,
     frequencies etc.
     """
-    def __init__(self, exp_params):
+    def __init__(self, exp_params, cosmos):
         self.exp_params = exp_params
-        cosmo = getattr(astropy.cosmology, exp_params.cosmology)
-        # cosmo = FlatwCDM(name=exp_params.cosmology) # could use this?
+        cosmo = FlatLambdaCDM(H0=cosmos.h*100*u.km/u.s/u.Mpc,
+                              Om0=cosmos.Omega_M, Ob0=cosmos.Omega_B)
+        #cosmo1=getattr(astropy.cosmology, exp_params.cosmology)
+        #cosmo = cosmo1.clone(name= exp_params.cosmology+' mod', H0=cosmos.h*100*u.km/u.s/u.Mpc, Om0=cosmos.Omega_M, Ob0=cosmos.Omega_B)
         self.fov_x = float(exp_params.fov_x)
         self.fov_y = float(exp_params.fov_y)
         self.FWHM = float(exp_params.FWHM)
@@ -74,7 +78,7 @@ class MapObj:
                        * (self.y[-1] - self.y[0])
                        * (self.z[-1] - self.z[0])
                        )
-        self.vox_vol = self.volume / (self.n_x * self.n_y * self.n_z)
+        #self.vox_vol = self.volume / (self.n_x * self.n_y * self.n_z)
         #print(self.dx)
         #print('vox_vol=', self.vox_vol)
         #sys.exit()

@@ -63,6 +63,8 @@ def calculate_power_spec_3d(map_obj, k_bin=None):
 
     fft_map = fft.fftn(map_obj.map) / (map_obj.n_x * map_obj.n_y * map_obj.n_z)
     #fft_map = fft.fftshift(fft_map)
+
+    # overflow in square sometimes
     ps = np.abs(fft_map)**2 * map_obj.volume
 
     Pk_modes = np.histogram(
@@ -85,13 +87,14 @@ def calculate_vid(map_obj, T_bin=None):
                             np.amax(map_obj.map) + 1)
     try:
         B_val, T_edges = np.histogram(map_obj.map.flatten(), bins=T_bin)
+        B_val = B_val.astype(float)
         B_val[np.where(B_val == 0)]= 1e-3
         T_array = (T_edges[1:] + T_edges[:-1]) / 2.
         return B_val, T_array
+
     except ValueError:
-        print('T_bin=', T_bin)
         print('map=', map_obj.map)
-        print('wrong')
+        print('wrong in vid calculation')
         sys.exit()
 
 
@@ -178,11 +181,18 @@ def load_peakpatch_catalogue(filein):
         Contains all halo information (position, redshift, etc..)
     """
     halos = empty_table()            # creates empty class to put any halo info into
+    cosmo = empty_table()            # creates empty class to put any cosmology info into  
 
     halo_info = np.load(filein)
 
     # get cosmology from halo catalogue
     params_dict = halo_info['cosmo_header'][()]
+    cosmo.Omega_M = params_dict.get('Omega_M')
+    cosmo.Omega_B = params_dict.get('Omega_B')
+    cosmo.Omega_L = params_dict.get('Omega_L')
+    cosmo.h = params_dict.get('h')
+    cosmo.ns = params_dict.get('ns')
+    cosmo.sigma8 = params_dict.get('sigma8')
 
     # if the halo catalogue is not centered along the z axis
     cen_x_fov = params_dict.get('cen_x_fov', 0.)
@@ -207,7 +217,7 @@ def load_peakpatch_catalogue(filein):
 
     assert np.max(halos.M) < 1.e17, "Halos seem too massive"
 
-    return halos
+    return halos, cosmo
 
 
 def cull_peakpatch_catalogue(halos, min_mass, mapinst):
