@@ -4,7 +4,6 @@ import src.tools
 import sys
 import scipy as sp
 import os
-import scipy.interpolate
 
 
 class Model:
@@ -130,7 +129,6 @@ class Mhalo_to_Lco(Model):
         self.halos = halos
         self.map_obj = map_obj
 
-
     def T_line(self):  # map, halos
         """
         The line Temperature in Rayleigh-Jeans limit
@@ -235,10 +233,10 @@ class Mhalo_to_Lco_Li(Mhalo_to_Lco):
 
     def ln_prior(self, model_params, prior_params):
         ln_prior = 0.0
+        #print('model_params\n', model_params)
         if (model_params[3] < 0) or (model_params[4] < 0):
             return - np.infty
         for m_par, p_par in zip(model_params, prior_params):
-            print('par', p_par[0], p_par[1])
             ln_prior += norm.logpdf(m_par,
                                     loc=p_par[0],
                                     scale=p_par[1])
@@ -251,7 +249,7 @@ class Mhalo_to_Lco_Li(Mhalo_to_Lco):
         if model_params is None:
             # Power law parameters from paper
             log_delta_mf, alpha, beta, sigma_sfr, sigma_lco = [
-                0.0, 1.37, -1.74, 0.3, 0.3]
+                        0.0, 1.37, -1.74, 0.3, 0.3]
         else:
             log_delta_mf, alpha, beta, sigma_sfr, sigma_lco = model_params
         delta_mf = 10**log_delta_mf
@@ -265,8 +263,8 @@ class Mhalo_to_Lco_Li(Mhalo_to_Lco):
         lir = sfr * 1e10 / delta_mf
         alphainv = 1./alpha
         # Lco' (observers units
-        #overflow in either of these
-        lir_ =lir**alphainv
+        # overflow in either of these
+        lir_ = lir**alphainv
         beta_ = 10**(-beta * alphainv)
 
         Lcop = lir_ * beta_
@@ -296,7 +294,9 @@ class Mhalo_to_Lco_Li(Mhalo_to_Lco):
         dat_sfr = np.reshape(dat_sfr, (dat_logm.size, dat_logzp1.size))
 
         # Get interpolated SFR value(s)
-        sfr_interp_tab = sp.interpolate.RectBivariateSpline(dat_logm, dat_logzp1, dat_sfr,
+        sfr_interp_tab = sp.interpolate.RectBivariateSpline(dat_logm,
+                                                            dat_logzp1,
+                                                            dat_sfr,
                                                             kx=1, ky=1)
         return sfr_interp_tab
 

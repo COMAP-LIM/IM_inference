@@ -20,9 +20,8 @@ import mcmc_params
 import experiment_params as exp_params
 import emcee
 
-#from schwimmbad import MPIPool
+#from schwimmbad import MPIPool # In future emcee release
 from emcee.utils import MPIPool
-from multiprocessing import Pool
 import sys
 import os
 import datetime
@@ -30,15 +29,13 @@ import datetime
 os.environ["OMP_NUM_THREADS"] = "1"
 # Perhaps move this function somewhere else ?
 
-#print('running')
-#print(mcmc_params.model_params_true['Lco_test'])
+
 def set_up_mcmc(mcmc_params, exp_params):
     """
     Sets up the different objects for the mcmc-run.
     """
 
     observables = []
-    model_name = mcmc_params.model
     halos, cosmo = src.tools.load_peakpatch_catalogue(
                         exp_params.halo_catalogue_file)
     map_obj = src.MapObj.MapObj(exp_params, cosmo)
@@ -115,7 +112,7 @@ def lnprob(model_params, model, observables, map_obj):
                 src.likelihoods.ln_chi_squared(
                     observable.data,
                     observable.mean,
-                    observable.independent_var
+                    np.sqrt(observable.independent_var)
                 )
     if not np.isfinite(ln_likelihood):
         return -np.infty
@@ -166,13 +163,13 @@ model, observables, map_obj = set_up_mcmc(mcmc_params, exp_params)
 get_data(mcmc_params, exp_params, observables,
          model)  # np.load("ps_data.npy")
 
-#pool = MPIPool(loadbalance=True)
-#if not pool.is_master():
-#    pool.wait()
-#    sys.exit(0)
+pool = MPIPool(loadbalance=True)
+if not pool.is_master():
+    pool.wait()
+    sys.exit(0)
 
 sampler = emcee.EnsembleSampler(mcmc_params.n_walkers, model.n_params, lnprob,
-                                args=(model, observables, map_obj), threads=144)#, pool=pool)
+                                args=(model, observables, map_obj), pool=pool)
 
 # starting positions (when implementing priors properly,
 # find a good way to draw the starting values from that prior.)
@@ -192,10 +189,12 @@ with open(mcmc_chains_fp, 'w') as chains_file:
         for result in sampler.sample(pos, iterations=1, storechain=True):
             samples[i], _, blobs = result
             pos = samples[i]
-            chains_file.write('\n'.join([str(item) for sublist in pos for item in sublist])+'\n')
+            chains_file.write('\n'.join([str(item) for sublist in pos
+                                         for item in sublist])+'\n')
+            sys.stdout.flush()
             i += 1
 
-#pool.close()
+pool.close()
 samples = samples.reshape(mcmc_params.n_steps * mcmc_params.n_walkers,
                           model.n_params)
 

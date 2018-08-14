@@ -1,6 +1,6 @@
 import numpy as np
 
-n_walkers = 10
+n_walkers = 100
 n_steps = 300
 
 # number of independent simulations of the model for each
@@ -9,8 +9,8 @@ n_realizations = 1
 
 likelihood = 'chi_squared'
 
-#observables = ('ps')
-observables = ('ps', 'vid')
+observables = ('ps')
+#observables = ('ps', 'vid')
 #observables =('vid')
 #model = 'wn_ps'
 #model = 'pl_ps'
@@ -45,7 +45,7 @@ prior_params['Lco_Pullen'] = [
 
 prior_params['Lco_Li'] = [
     [0.0, 0.3], 	# logdelta_MF
-    [1.17, 0.37],	 # alpha - log10 slope
+    [1.17, 0.1],#0.37],	 # alpha - log10 slope
     [0.21, 3.74],	 # beta - log10 intercept
     [0.3, 0.1],		# sigma_SFR
     [0.3, 0.1],		# sigma_Lco

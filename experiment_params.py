@@ -6,9 +6,9 @@ import numpy as np
 
 # We should also have info about noise here.
 
-cosmology = 'Planck15'  # must be an astropy compatible cosmology
+#cosmology = 'Planck15'  # must be an astropy compatible cosmology
 
-#FWHM = 4  # arcmin Haavard
+#FWHM = 4  # arcmin Haavard, Pullen
 FWHM = 6  # arcmin Li
 
 n_pix_x = 22  # no of pixels
@@ -16,7 +16,7 @@ n_pix_y = 22
 
 # should be calculated later
 #sigma_T = 11.#2.75#1e9  # muK, noise Haavard
-sigma_T = 23.25# MuK, Li
+sigma_T = 13.73#41.5/np.sqrt(40)#23.25# MuK, Li
 map_smoothing = True
 
 halo_catalogue_file = 'catalogues/peakpatchcatalogue_1pt4deg_z2pt4-3pt4.npz'

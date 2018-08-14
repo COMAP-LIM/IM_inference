@@ -1,8 +1,7 @@
 import numpy as np
-#import astropy.cosmology
 from astropy.cosmology import FlatLambdaCDM
 from astropy import units as u
-import sys
+
 
 class MapObj:
     """
@@ -78,10 +77,6 @@ class MapObj:
                        * (self.y[-1] - self.y[0])
                        * (self.z[-1] - self.z[0])
                        )
-        #self.vox_vol = self.volume / (self.n_x * self.n_y * self.n_z)
-        #print(self.dx)
-        #print('vox_vol=', self.vox_vol)
-        #sys.exit()
 
         self.map = None
 

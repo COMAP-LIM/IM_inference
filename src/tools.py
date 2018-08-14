@@ -88,7 +88,7 @@ def calculate_vid(map_obj, T_bin=None):
     try:
         B_val, T_edges = np.histogram(map_obj.map.flatten(), bins=T_bin)
         B_val = B_val.astype(float)
-        B_val[np.where(B_val == 0)]= 1e-3
+        B_val[np.where(B_val == 0)] = 1e-3
         T_array = (T_edges[1:] + T_edges[:-1]) / 2.
         return B_val, T_array
 
