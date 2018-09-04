@@ -7,13 +7,11 @@ class MapObj:
     """
     Class for the map-objects which carry the info about the maps and
     also the maps themselves.
-    Should in the future also contain info about pixel size, FWHM,
-    frequencies etc.
     """
-    def __init__(self, exp_params, cosmos):
+    def __init__(self, exp_params):
         self.exp_params = exp_params
-        cosmo = FlatLambdaCDM(H0=cosmos.h*100*u.km/u.s/u.Mpc,
-                              Om0=cosmos.Omega_M, Ob0=cosmos.Omega_B)
+        cosmo = FlatLambdaCDM(H0=70, Om0=0.3, Ob0=0.05)  # FlatLambdaCDM(H0=cosmos.h*100*u.km/u.s/u.Mpc,
+                            #   Om0=cosmos.Omega_M, Ob0=cosmos.Omega_B)
         #cosmo1=getattr(astropy.cosmology, exp_params.cosmology)
         #cosmo = cosmo1.clone(name= exp_params.cosmology+' mod', H0=cosmos.h*100*u.km/u.s/u.Mpc, Om0=cosmos.Omega_M, Ob0=cosmos.Omega_B)
         self.fov_x = float(exp_params.fov_x)
@@ -70,14 +68,16 @@ class MapObj:
         self.n_x = len(self.x) - 1
         self.n_y = len(self.y) - 1
         self.n_z = len(self.z) - 1
-        self.dx = self.x[1] - self.x[0]
-        self.dy = self.y[1] - self.y[0]
-        self.dz = self.z[1] - self.z[0]
+        self.dx = np.abs(np.mean(np.diff(self.x)))#self.x[1] - self.x[0]
+        self.dy = np.abs(np.mean(np.diff(self.y)))#self.y[1] - self.y[0]
+        self.dz = np.abs(np.mean(np.diff(self.z)))#self.z[1] - self.z[0]
+        #self.voxel_volume = self.dx * self.dy * self.dz
         self.volume = ((self.x[-1] - self.x[0])
                        * (self.y[-1] - self.y[0])
                        * (self.z[-1] - self.z[0])
                        )
-
+        self.n_vox = self.n_nu_bins * self.n_pix_x * self.n_pix_y
+        self.voxel_volume = self.volume / self.n_vox
         self.map = None
 
     def calculate_observables(self, Observables):
@@ -85,5 +85,5 @@ class MapObj:
             observable.calculate_observable(self)
 
     def generate_noise_map(self):
-        return self.exp_params.sigma_T*np.random.randn(self.n_x,
-                                                       self.n_y, self.n_z)
+        return self.exp_params.sigma_T * np.random.randn(self.n_x,
+                                                         self.n_y, self.n_z)

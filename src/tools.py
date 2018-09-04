@@ -56,13 +56,11 @@ def calculate_power_spec_3d(map_obj, k_bin=None):
                                                     indexing='ij')))
 
     if k_bin is None:
-
         dk = max(np.diff(kx)[0], np.diff(ky)[0], np.diff(kz)[0])
         kmax_dk = int(np.ceil(max(np.amax(kx), np.amax(ky), np.amax(kz)) / dk))
         k_bin = np.linspace(0, kmax_dk, kmax_dk + 1)
 
     fft_map = fft.fftn(map_obj.map) / (map_obj.n_x * map_obj.n_y * map_obj.n_z)
-    #fft_map = fft.fftshift(fft_map)
 
     # overflow in square sometimes
     ps = np.abs(fft_map)**2 * map_obj.volume
@@ -76,9 +74,43 @@ def calculate_power_spec_3d(map_obj, k_bin=None):
         nmodes > 0)] / nmodes[np.where(nmodes > 0)]
     k_bincents = (k_binedges[1:] + k_binedges[:-1]) / 2.
 
-    # angular_average_3d(ps, map_obj.fx, map_obj.fy, map_obj.fz, dk)
-    return Pk, k_bincents, nmodes
+    return Pk, k_bincents, nmodes/2.0
 
+
+def calculate_power_spec_3dr(map_obj, k_bin=None):
+
+    # just something to get reasonable values for dk, not very good
+
+    # dk = (np.sqrt(np.sqrt(map_obj.dx * map_obj.dy * map_obj.dz))
+    #      / np.sqrt(map_obj.volume))
+
+    kx = np.fft.fftfreq(map_obj.n_x, d=map_obj.dx) * 2*np.pi
+    ky = np.fft.fftfreq(map_obj.n_y, d=map_obj.dy) * 2*np.pi
+    kz = np.fft.rfftfreq(map_obj.n_z, d=map_obj.dz) * 2*np.pi
+    kgrid = np.sqrt(sum(ki**2 for ki in np.meshgrid(kx, ky, kz,
+                                                    indexing='ij')))
+
+    if k_bin is None:
+
+        dk = max(np.diff(kx)[0], np.diff(ky)[0], np.diff(kz)[0])
+        kmax_dk = int(np.ceil(max(np.amax(kx), np.amax(ky), np.amax(kz)) / dk))
+        k_bin = np.linspace(0, kmax_dk, kmax_dk + 1)
+
+    fft_map = fft.rfftn(map_obj.map) / (map_obj.n_x * map_obj.n_y * map_obj.n_z)
+
+    # overflow in square sometimes
+    ps = np.abs(fft_map)**2 * map_obj.volume
+
+    Pk_modes = np.histogram(
+        kgrid[kgrid > 0], bins=k_bin, weights=ps[kgrid > 0])[0]
+    nmodes, k_binedges = np.histogram(kgrid[kgrid > 0], bins=k_bin)
+
+    Pk = Pk_modes
+    Pk[np.where(nmodes > 0)] = Pk_modes[np.where(
+        nmodes > 0)] / nmodes[np.where(nmodes > 0)]
+    k_bincents = (k_binedges[1:] + k_binedges[:-1]) / 2.
+
+    return Pk, k_bincents, nmodes
 
 def calculate_vid(map_obj, T_bin=None):
 

@@ -20,7 +20,7 @@ import mcmc_params
 import experiment_params as exp_params
 import emcee
 
-#from schwimmbad import MPIPool # In future emcee release
+# from schwimmbad import MPIPool # In future emcee release
 from emcee.utils import MPIPool
 import sys
 import os
@@ -36,13 +36,7 @@ def set_up_mcmc(mcmc_params, exp_params):
     """
 
     observables = []
-    halos, cosmo = src.tools.load_peakpatch_catalogue(
-                        exp_params.halo_catalogue_file)
-    map_obj = src.MapObj.MapObj(exp_params, cosmo)
-
-    # remove Halo's we don't want.
-    halos = src.tools.cull_peakpatch_catalogue(
-                halos, exp_params.min_mass, map_obj)
+    map_obj = src.MapObj.MapObj(exp_params)
 
     # Add more if-statements as other observables are implemented.
     # At some point we should add some checks to make sure that a
@@ -60,10 +54,11 @@ def set_up_mcmc(mcmc_params, exp_params):
         model = src.Model.PowerLawPowerSpectrum(exp_params, map_obj)
 
     if (mcmc_params.model == 'Lco_Pullen'):
-        model = src.Model.Mhalo_to_Lco_Pullen(exp_params, halos, map_obj)
+        model = src.Model.Mhalo_to_Lco_Pullen(exp_params, map_obj)
     if (mcmc_params.model == 'Lco_Li'):
-        model = src.Model.Mhalo_to_Lco_Li(exp_params, halos, map_obj)
+        model = src.Model.Mhalo_to_Lco_Li(exp_params, map_obj)
 
+    model.set_up()
     return model, observables, map_obj
 
 
@@ -86,7 +81,7 @@ def lnprob(model_params, model, observables, map_obj):
     mean of the observables and uses this mean to estimate the
     likelihood.
     """
-
+    # print('in lnprob')
     # Simulate the required number of realizations in order
     # to estimate the mean value of the different observables
     # at the current model parameters.
@@ -112,7 +107,7 @@ def lnprob(model_params, model, observables, map_obj):
                 src.likelihoods.ln_chi_squared(
                     observable.data,
                     observable.mean,
-                    np.sqrt(observable.independent_var)
+                    observable.independent_var
                 )
     if not np.isfinite(ln_likelihood):
         return -np.infty
@@ -127,6 +122,7 @@ def get_data(mcmc_params, exp_params, observables, model):
         map_obj.map = np.load(mcmc_params.map_filename)
 
     else:
+        # print('in else')
         model_params = mcmc_params.model_params_true[model.label]
         map_obj.map = model.generate_map(
             model_params) + map_obj.generate_noise_map()
@@ -148,7 +144,6 @@ def get_data(mcmc_params, exp_params, observables, model):
     # print(data.item()['ps'])
 
     insert_data(data, observables)
-
     return data
 
 
@@ -158,23 +153,21 @@ mcmc_chains_fp, mcmc_log_fp = src.tools.make_log_file_handles(
 src.tools.make_picklable(exp_params, mcmc_params)
 
 model, observables, map_obj = set_up_mcmc(mcmc_params, exp_params)
-
+# print('loaded stuff')
 # load mock data
 get_data(mcmc_params, exp_params, observables,
          model)  # np.load("ps_data.npy")
 
-pool = MPIPool(loadbalance=True)
-if not pool.is_master():
-    pool.wait()
-    sys.exit(0)
+# pool = MPIPool(loadbalance=True)
+# if not pool.is_master():
+#     pool.wait()
+#     sys.exit(0)
 
 sampler = emcee.EnsembleSampler(mcmc_params.n_walkers, model.n_params, lnprob,
-                                args=(model, observables, map_obj), pool=pool)
+                                args=(model, observables, map_obj), threads=4)
+# pool=pool)
 
-# starting positions (when implementing priors properly,
-# find a good way to draw the starting values from that prior.)
-# pos = np.array([6.5, 3.0]) + np.random.randn(mcmc_params.n_walkers,
-#                                             model.n_params)
+
 pos = model.mcmc_walker_initial_positions(
     mcmc_params.prior_params[model.label], mcmc_params.n_walkers)
 samples = np.zeros((mcmc_params.n_steps,
@@ -190,11 +183,11 @@ with open(mcmc_chains_fp, 'w') as chains_file:
             samples[i], _, blobs = result
             pos = samples[i]
             chains_file.write('\n'.join([str(item) for sublist in pos
-                                         for item in sublist])+'\n')
+                                         for item in sublist]) + '\n')
             sys.stdout.flush()
             i += 1
 
-pool.close()
+# pool.close()
 samples = samples.reshape(mcmc_params.n_steps * mcmc_params.n_walkers,
                           model.n_params)
 

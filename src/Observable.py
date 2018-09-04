@@ -37,12 +37,12 @@ class Power_Spectrum(Observable):
         self.mcmc_params = mcmc_params
 
     def calculate_observable(self, map_obj):
-        self.values, self.dk, self.n_modes = \
+        self.values, self.k, self.n_modes = \
             src.tools.calculate_power_spec_3d(map_obj,
                                               self.mcmc_params.ps_kbins)
 
     def independent_variance(self):
-        self.independent_var = self.mean / np.sqrt(self.n_modes)
+        self.independent_var = self.mean**2 / self.n_modes
 
 
 class Voxel_Intensity_Distribution(Observable):
@@ -56,4 +56,4 @@ class Voxel_Intensity_Distribution(Observable):
             src.tools.calculate_vid(map_obj, self.mcmc_params.vid_Tbins)
 
     def independent_variance(self):
-        self.independent_var = np.sqrt(self.mean)#*np.sqrt(1- self.mean/n_vox)
+        self.independent_var = self.mean  # *np.sqrt(1- self.mean/n_vox)

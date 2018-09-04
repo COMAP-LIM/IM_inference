@@ -8,4 +8,6 @@ generate_data.py
 .vscode/settings.json
 .pytest_cache/v/cache/nodeids
 .vscode/.ropeproject/objectdb
-radioactive_data.txt
+*.txt
+testing_output/
+catalogues/
