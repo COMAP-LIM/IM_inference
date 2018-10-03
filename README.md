@@ -1,14 +1,15 @@
 Code to do inference from line intensity maps
 
 TODO:
-- Implement models based on halo catalogs using limlam_mocker
 - Implement cosmology (angles, redshift, Mpc etc.)
 - Implement functions to calculate covariance matrices
 - Tests, and automatic tests (pytest?)
-- Parallellization (just use threads?)
+- Parallellization
 - Make "COMAP Light" experiment setup (same as COMAP only smaller redshift range for faster runtime)
 - Let run_mcmc be run with parameter files as command line arguments instead to use them instead of the default ones
 - Include additional model output (e.g. luminosity functions)
+- Automatically run on same input data as previous run
+- Automatically run on same experiment and mcmc setup as previous run
 
 - Lots of ideas for different models to compare
 
