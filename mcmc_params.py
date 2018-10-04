@@ -1,7 +1,7 @@
 import numpy as np
 
 n_walkers = 4
-n_steps = 50
+n_steps = 10
 
 # number of independent simulations of the model for each
 # step in the MCMC
@@ -73,5 +73,5 @@ generate_file = True
 save_file = True
 
 # Use MPI-pool?
-pool = False
+pool = True
 n_threads = 4

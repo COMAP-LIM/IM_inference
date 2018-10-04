@@ -16,8 +16,6 @@ import src.tools
 import src.Model
 import src.Observable
 import src.likelihoods
-import mcmc_params
-import experiment_params as exp_params
 import emcee
 
 # from schwimmbad import MPIPool # In future emcee release
@@ -25,8 +23,16 @@ from emcee.utils import MPIPool
 import sys
 import os
 import datetime
+import importlib
 
 os.environ["OMP_NUM_THREADS"] = "1"
+
+if len(sys.argv) < 2:
+    import mcmc_params
+    import experiment_params as exp_params
+else:
+    mcmc_params = importlib.import_module(sys.argv[1][:-3])
+    exp_params = importlib.import_module(sys.argv[2][:-3])
 
 
 def lnprob(model_params, model, observables, map_obj):
@@ -77,7 +83,7 @@ if __name__ == "__main__":
             sys.exit(0)
 
     start_time = datetime.datetime.now()
-    mcmc_chains_fp, mcmc_log_fp = src.tools.make_log_file_handles(
+    mcmc_chains_fp, mcmc_log_fp, samples_log_fp, runid = src.tools.make_log_file_handles(
         mcmc_params.output_dir)
     src.tools.make_picklable(exp_params, mcmc_params)
 
@@ -103,7 +109,8 @@ if __name__ == "__main__":
     i = 0
     with open(mcmc_chains_fp, 'w') as chains_file:
         while i < mcmc_params.n_steps:
-            print('undergoing iteration {0}'.format(i))
+            print('starting iteration %i out of %i on run %i' % (
+                i + 1, mcmc_params.n_steps, runid))
             sys.stdout.flush()
             for result in sampler.sample(pos, iterations=1, storechain=True):
                 samples[i], _, blobs = result
@@ -116,7 +123,7 @@ if __name__ == "__main__":
         pool.close()
     samples = samples.reshape(mcmc_params.n_steps * mcmc_params.n_walkers,
                               model.n_params)
-
+                              
     np.save(mcmc_params.samples_filename, samples)
 
-    src.tools.write_log_file(mcmc_log_fp, start_time, samples)
+    src.tools.write_log_file(mcmc_log_fp, samples_log_fp, start_time, samples)

@@ -18,3 +18,4 @@ detection.py
 plot_posterior.py
 sim_detection.py
 ps_tes.py
+new_mcmc.py

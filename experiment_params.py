@@ -15,7 +15,7 @@ map_smoothing = True
 
 halo_catalogue_folder = 'catalogues/'
 
-min_mass = 2.5e12  # 1e12  # 2.5e10
+min_mass = 2.5e10  # 1e12  # 2.5e10
 
 # field of view in degrees, field size
 fov_x = 1.5
