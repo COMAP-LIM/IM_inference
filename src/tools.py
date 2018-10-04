@@ -45,6 +45,7 @@ def set_up_mcmc(mcmc_params, exp_params):
         model = src.Model.Simplified_Li(exp_params, map_obj)
 
     model.set_up()
+
     return model, observables, map_obj
 
 

@@ -57,3 +57,9 @@ class Voxel_Intensity_Distribution(Observable):
 
     def independent_variance(self):
         self.independent_var = self.mean  # *np.sqrt(1- self.mean/n_vox)
+    
+    def calculate_mean(self, n):
+        self.mean = self.sum / n
+        self.mean[np.where(self.mean == 0)] = 1e-2
+        self.sum = None
+        self.independent_variance()

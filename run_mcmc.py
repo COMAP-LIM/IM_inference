@@ -53,6 +53,7 @@ def lnprob(model_params, model, observables, map_obj):
         map_obj.map = src.tools.gaussian_smooth(
             model.generate_map(model_params), map_obj.sigma_x,
             map_obj.sigma_y) + map_obj.generate_noise_map()
+        map_obj.map -= np.mean(map_obj.map.flatten())
         map_obj.calculate_observables(observables)
         for observable in observables:
             observable.add_observable_to_sum()
@@ -69,6 +70,26 @@ def lnprob(model_params, model, observables, map_obj):
                     observable.mean,
                     observable.independent_var
                 )
+    elif (mcmc_params.likelihood == 'chi_squared_cov'):
+        n_data = len(mcmc_params.cov_mat_0[:, 0])
+        i = 0
+        data = np.zeros(n_data)
+        mean = np.zeros(n_data)
+        ind_var = np.zeros(n_data)
+        for observable in observables:
+            n_data_obs = len(observable.data)
+            data[i:i + n_data_obs] = observable.data
+            mean[i:i + n_data_obs] = observable.mean
+            ind_var[i:i + n_data_obs] = observable.independent_var
+            i += n_data_obs
+        var_ratio = np.sqrt(
+            np.outer(ind_var, ind_var)
+            / np.outer(mcmc_params.ind_var_0, mcmc_params.ind_var_0)
+        )
+        cov_mat = mcmc_params.cov_mat_0 * var_ratio
+        ln_likelihood += src.likelihoods.ln_chi_squared_cov(
+            data, mean, cov_mat)
+
     if not np.isfinite(ln_likelihood):
         return -np.infty
 
