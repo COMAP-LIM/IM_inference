@@ -71,3 +71,6 @@ samples_filename = 'samples_lco_test4.npy'
 output_dir = 'testing_output'
 generate_file = True
 save_file = True
+
+# Use MPI-pool?
+pool = True

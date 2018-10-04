@@ -41,6 +41,8 @@ def set_up_mcmc(mcmc_params, exp_params):
         model = src.Model.Mhalo_to_Lco_Pullen(exp_params, map_obj)
     if (mcmc_params.model == 'Lco_Li'):
         model = src.Model.Mhalo_to_Lco_Li(exp_params, map_obj)
+    if (mcmc_params.model == 'simp_Li'):
+        model = src.Model.Simplified_Li(exp_params, map_obj)
 
     model.set_up()
     return model, observables, map_obj
