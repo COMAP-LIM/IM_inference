@@ -75,6 +75,7 @@ if __name__ == "__main__":
         if not pool.is_master():
             pool.wait()
             sys.exit(0)
+
     start_time = datetime.datetime.now()
     mcmc_chains_fp, mcmc_log_fp = src.tools.make_log_file_handles(
         mcmc_params.output_dir)
@@ -85,15 +86,14 @@ if __name__ == "__main__":
 
     src.tools.get_data(mcmc_params, exp_params, model, observables, map_obj)
 
-    
     if mcmc_params.pool:
         sampler = emcee.EnsembleSampler(
             mcmc_params.n_walkers, model.n_params, lnprob,
             args=(model, observables, map_obj), pool=pool)
-    else :
+    else:
         sampler = emcee.EnsembleSampler(
             mcmc_params.n_walkers, model.n_params, lnprob,
-            args=(model, observables, map_obj), threads=2)
+            args=(model, observables, map_obj), threads=mcmc_params.n_threads)
     pos = model.mcmc_walker_initial_positions(
         mcmc_params.prior_params[model.label], mcmc_params.n_walkers)
     samples = np.zeros((mcmc_params.n_steps,
@@ -119,4 +119,4 @@ if __name__ == "__main__":
 
     np.save(mcmc_params.samples_filename, samples)
 
-    src.tools.write_log_file(mcmc_log_fp, start_time)
+    src.tools.write_log_file(mcmc_log_fp, start_time, samples)

@@ -174,9 +174,10 @@ def make_log_file_handles(output_dir):
             output_dir, 'params',
             'mcmc_params_run{0:d}.py'.format(runid))):
         runid += 1
-
+    print('Current run_id: %i' % runid)
     mcmc_params_fp = os.path.join(output_dir, 'params',
                                   'mcmc_params_run{0:d}.py'.format(runid))
+    shutil.copy2('mcmc_params.py', mcmc_params_fp)
     exp_params_fp = os.path.join(output_dir, 'params',
                                  'experiment_params_run{0:d}.py'.format(runid))
     mcmc_chains_fp = os.path.join(output_dir, 'chains',
@@ -184,20 +185,31 @@ def make_log_file_handles(output_dir):
     mcmc_log_fp = os.path.join(output_dir, 'log_files',
                                'mcmc_log_run{0:d}.txt'.format(runid))
 
-    shutil.copy2('mcmc_params.py', mcmc_params_fp)
     shutil.copy2('experiment_params.py', exp_params_fp)
     return mcmc_chains_fp, mcmc_log_fp
 
 
-def write_log_file(mcmc_log_fp, start_time):
+def write_log_file(mcmc_log_fp, start_time, samples):
     with open(mcmc_log_fp, 'w') as log_file, \
             open('mcmc_params.py', 'r') as param_file:
         log_file.write('Time start of run     : %s \n' % (start_time))
         log_file.write('Time end of run       : %s \n' %
                        (datetime.datetime.now()))
-        log_file.write('Total execution time  : %s seconds \n' % (
+        tot_time = (datetime.datetime.now() - start_time).total_seconds()
+        log_file.write('Total execution time  : %.1f seconds \n' % (
                        (datetime.datetime.now() - start_time).total_seconds()))
-        log_file.write('\n Parameters: \n' + param_file.read())
+        log_file.write('Total execution time  : %.1f minutes \n' % (
+                       (tot_time / 60)))
+        n_par = len(samples[0, :])
+        percentiles = [16, 68 + 16]  # fix at some point
+        n_cut = samples.shape[0] // 2
+        log_file.write('\nPosterior parameter constraints: \n')
+        for i in range(n_par):
+            median = np.median(samples[n_cut:, i])
+            constraints = np.percentile(samples[n_cut:, i], percentiles) - median
+            log_file.write('Parameter %i: %.3f +%.3f %.3f \n' % (
+                i, median, constraints[1], constraints[0]))
+        log_file.write('\nmcmc_params.py: \n' + param_file.read())
         print('Execution time:', datetime.datetime.now() - start_time)
 
 
