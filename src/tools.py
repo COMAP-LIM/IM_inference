@@ -210,8 +210,9 @@ def write_log_file(mcmc_log_fp, samples_log_fp, start_time, samples):
                        tot_time))
         log_file.write('Total execution time  : %.1f minutes \n' % (
                        (tot_time / 60)))
-        print(samples.shape)
         np.save(samples_log_fp, samples)
+        n_steps, n_walkers, n_params = samples.shape
+        samples = samples.reshape(n_steps * n_walkers, n_params)
         n_par = len(samples[0, :])
         percentiles = [16, 68 + 16]  # fix at some point
         n_cut = samples.shape[0] // 2

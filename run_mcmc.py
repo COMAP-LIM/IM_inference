@@ -83,8 +83,8 @@ if __name__ == "__main__":
             sys.exit(0)
 
     start_time = datetime.datetime.now()
-    mcmc_chains_fp, mcmc_log_fp, samples_log_fp, runid = src.tools.make_log_file_handles(
-        mcmc_params.output_dir)
+    mcmc_chains_fp, mcmc_log_fp, samples_log_fp, runid = \
+        src.tools.make_log_file_handles(mcmc_params.output_dir)
     src.tools.make_picklable(exp_params, mcmc_params)
 
     model, observables, map_obj = src.tools.set_up_mcmc(
@@ -107,23 +107,24 @@ if __name__ == "__main__":
                         model.n_params))
 
     i = 0
-    with open(mcmc_chains_fp, 'w') as chains_file:
-        while i < mcmc_params.n_steps:
-            print('starting iteration %i out of %i on run %i' % (
-                i + 1, mcmc_params.n_steps, runid))
+    
+    while i < mcmc_params.n_steps:
+        print('starting iteration %i out of %i of run %i' % (
+            i + 1, mcmc_params.n_steps, runid),
+            datetime.datetime.now() - start_time)
+        sys.stdout.flush()
+        for result in sampler.sample(pos, iterations=1, storechain=True):
+            samples[i], _, blobs = result
+            pos = samples[i]
+            with open(mcmc_chains_fp, 'a') as chains_file:
+                for j in range(mcmc_params.n_walkers):
+                    chains_file.write('{0:4d} {1:s}\n'.format(                                                     
+                        j, ' '.join([str(p) for p in pos[j]])))
             sys.stdout.flush()
-            for result in sampler.sample(pos, iterations=1, storechain=True):
-                samples[i], _, blobs = result
-                pos = samples[i]
-                chains_file.write('\n'.join([str(item) for sublist in pos
-                                            for item in sublist]) + '\n')
-                sys.stdout.flush()
-                i += 1
+            i += 1
     if mcmc_params.pool:
         pool.close()
-    samples = samples.reshape(mcmc_params.n_steps * mcmc_params.n_walkers,
-                              model.n_params)
-                              
+                         
     np.save(mcmc_params.samples_filename, samples)
 
     src.tools.write_log_file(mcmc_log_fp, samples_log_fp, start_time, samples)
