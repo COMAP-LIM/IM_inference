@@ -11,3 +11,10 @@ generate_data.py
 *.txt
 testing_output/
 catalogues/
+ps_test.py
+beta_lumfunc.py
+*.pdf
+detection.py
+plot_posterior.py
+sim_detection.py
+ps_tes.py

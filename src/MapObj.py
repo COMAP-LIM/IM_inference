@@ -10,7 +10,7 @@ class MapObj:
     """
     def __init__(self, exp_params):
         self.exp_params = exp_params
-        cosmo = FlatLambdaCDM(H0=70, Om0=0.3, Ob0=0.05)  # FlatLambdaCDM(H0=cosmos.h*100*u.km/u.s/u.Mpc,
+        cosmo = FlatLambdaCDM(H0=70, Om0=0.286, Ob0=0.047)  # FlatLambdaCDM(H0=cosmos.h*100*u.km/u.s/u.Mpc,
                             #   Om0=cosmos.Omega_M, Ob0=cosmos.Omega_B)
         #cosmo1=getattr(astropy.cosmology, exp_params.cosmology)
         #cosmo = cosmo1.clone(name= exp_params.cosmology+' mod', H0=cosmos.h*100*u.km/u.s/u.Mpc, Om0=cosmos.Omega_M, Ob0=cosmos.Omega_B)

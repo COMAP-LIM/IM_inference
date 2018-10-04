@@ -9,45 +9,87 @@ import datetime
 import os
 import errno
 import shutil
+import src.MapObj
+import src.Model
+import src.Observable
 
 
-# Calculates the angular average of any map.
-def angular_average_3d(inmap, x, y, z, dr, x0=0, y0=0, z0=0):
-    x_ind, y_ind, z_ind = np.indices(inmap.shape)
+def set_up_mcmc(mcmc_params, exp_params):
+    """
+    Sets up the different objects for the mcmc-run.
+    """
 
-    r = np.sqrt((x[x_ind] - x0)**2 +
-                (y[y_ind] - y0)**2 +
-                (z[z_ind] - z0)**2)
+    observables = []
+    map_obj = src.MapObj.MapObj(exp_params)
 
-    # np.hypot(x[x_ind] - x0, y[y_ind] - y0, z[z_ind] - z0)
-    # Get sorted radii
-    ind = np.argsort(r.flat)
-    r_sorted = r.flat[ind] / dr
-    map_sorted = inmap.flat[ind]
+    # Add more if-statements as other observables are implemented.
+    # At some point we should add some checks to make sure that a
+    # valid model, and a set of observables are actually picked.
+    if 'ps' in mcmc_params.observables:
+        ps = src.Observable.Power_Spectrum(mcmc_params)
+        observables.append(ps)
+    if 'vid' in mcmc_params.observables:
+        vid = src.Observable.Voxel_Intensity_Distribution(mcmc_params)
+        observables.append(vid)
 
-    # Get the integer part of the radii (bin size = 1)
-    r_int = r_sorted.astype(int)
+    if (mcmc_params.model == 'wn_ps'):
+        model = src.Model.WhiteNoisePowerSpectrum(exp_params)
+    if (mcmc_params.model == 'pl_ps'):
+        model = src.Model.PowerLawPowerSpectrum(exp_params, map_obj)
 
-    # Find all pixels that fall within each radial bin.
-    delta_r = r_int[1:] - r_int[:-1]  # Assumes all dr intervals represented
+    if (mcmc_params.model == 'Lco_Pullen'):
+        model = src.Model.Mhalo_to_Lco_Pullen(exp_params, map_obj)
+    if (mcmc_params.model == 'Lco_Li'):
+        model = src.Model.Mhalo_to_Lco_Li(exp_params, map_obj)
 
-    rind = np.where(delta_r)[0]  # location of changed radius
-    nr = rind[1:] - rind[:-1]  # number of radius bin
+    model.set_up()
+    return model, observables, map_obj
 
-    # Cumulative sum to figure out sums for each radius bin
-    csim = np.cumsum(map_sorted, dtype=float)
-    sum_rbin = csim[rind[1:]] - csim[rind[:-1]]
 
-    return sum_rbin / nr, (r_int[rind[1:]] + 0.5) * dr, nr  # average value of
-    # function in each radial bin of length dr
+def insert_data(data, observables):
+    # Inserts data downloaded from file into the corresponding observable
+    # objects.
+    if isinstance(data, dict):
+        for observable in observables:
+            # remove "item()"" here if data is dict (and not gotten from file)
+            observable.data = data[observable.label]
+    else:
+        for observable in observables:
+            # remove "item()"" here if data is dict (and not gotten from file)
+            observable.data = data.item()[observable.label]
+
+
+def get_data(mcmc_params, exp_params, model, observables, map_obj):
+
+    if not mcmc_params.generate_file:
+        print('opening map data file')
+        map_obj.map = np.load(mcmc_params.map_filename)
+
+    else:
+        model_params = mcmc_params.model_params_true[model.label]
+        map_obj.map = src.tools.gaussian_smooth(
+            model.generate_map(model_params), map_obj.sigma_x,
+            map_obj.sigma_y) + map_obj.generate_noise_map()
+        if mcmc_params.save_file:
+            print('saving map to file')
+            np.save(mcmc_params.map_filename, map_obj.map)
+
+    map_obj.calculate_observables(observables)
+
+    data = dict()
+
+    for observable in observables:
+        data[observable.label] = observable.values
+        print(observable.label, observable.values)
+        if 0 in observable.values:
+            print('some of data values are equal to 0')
+            sys.exit()
+
+    insert_data(data, observables)
+    return data
 
 
 def calculate_power_spec_3d(map_obj, k_bin=None):
-
-    # just something to get reasonable values for dk, not very good
-
-    # dk = (np.sqrt(np.sqrt(map_obj.dx * map_obj.dy * map_obj.dz))
-    #      / np.sqrt(map_obj.volume))
 
     kx = np.fft.fftfreq(map_obj.n_x, d=map_obj.dx) * 2*np.pi
     ky = np.fft.fftfreq(map_obj.n_y, d=map_obj.dy) * 2*np.pi
@@ -62,7 +104,6 @@ def calculate_power_spec_3d(map_obj, k_bin=None):
 
     fft_map = fft.fftn(map_obj.map) / (map_obj.n_x * map_obj.n_y * map_obj.n_z)
 
-    # overflow in square sometimes
     ps = np.abs(fft_map)**2 * map_obj.volume
 
     Pk_modes = np.histogram(
@@ -74,43 +115,8 @@ def calculate_power_spec_3d(map_obj, k_bin=None):
         nmodes > 0)] / nmodes[np.where(nmodes > 0)]
     k_bincents = (k_binedges[1:] + k_binedges[:-1]) / 2.
 
-    return Pk, k_bincents, nmodes/2.0
+    return Pk, k_bincents, nmodes / 2.0
 
-
-def calculate_power_spec_3dr(map_obj, k_bin=None):
-
-    # just something to get reasonable values for dk, not very good
-
-    # dk = (np.sqrt(np.sqrt(map_obj.dx * map_obj.dy * map_obj.dz))
-    #      / np.sqrt(map_obj.volume))
-
-    kx = np.fft.fftfreq(map_obj.n_x, d=map_obj.dx) * 2*np.pi
-    ky = np.fft.fftfreq(map_obj.n_y, d=map_obj.dy) * 2*np.pi
-    kz = np.fft.rfftfreq(map_obj.n_z, d=map_obj.dz) * 2*np.pi
-    kgrid = np.sqrt(sum(ki**2 for ki in np.meshgrid(kx, ky, kz,
-                                                    indexing='ij')))
-
-    if k_bin is None:
-
-        dk = max(np.diff(kx)[0], np.diff(ky)[0], np.diff(kz)[0])
-        kmax_dk = int(np.ceil(max(np.amax(kx), np.amax(ky), np.amax(kz)) / dk))
-        k_bin = np.linspace(0, kmax_dk, kmax_dk + 1)
-
-    fft_map = fft.rfftn(map_obj.map) / (map_obj.n_x * map_obj.n_y * map_obj.n_z)
-
-    # overflow in square sometimes
-    ps = np.abs(fft_map)**2 * map_obj.volume
-
-    Pk_modes = np.histogram(
-        kgrid[kgrid > 0], bins=k_bin, weights=ps[kgrid > 0])[0]
-    nmodes, k_binedges = np.histogram(kgrid[kgrid > 0], bins=k_bin)
-
-    Pk = Pk_modes
-    Pk[np.where(nmodes > 0)] = Pk_modes[np.where(
-        nmodes > 0)] / nmodes[np.where(nmodes > 0)]
-    k_bincents = (k_binedges[1:] + k_binedges[:-1]) / 2.
-
-    return Pk, k_bincents, nmodes
 
 def calculate_vid(map_obj, T_bin=None):
 
@@ -120,7 +126,7 @@ def calculate_vid(map_obj, T_bin=None):
     try:
         B_val, T_edges = np.histogram(map_obj.map.flatten(), bins=T_bin)
         B_val = B_val.astype(float)
-        B_val[np.where(B_val == 0)] = 1e-3
+        # B_val[np.where(B_val == 0)] = 1e-3
         T_array = (T_edges[1:] + T_edges[:-1]) / 2.
         return B_val, T_array
 
@@ -144,12 +150,16 @@ def gaussian_smooth(mymap, sigma_x, sigma_y, n_sigma=5.0):
     return smoothed_map
 
 
+## From Tony Li
+
 def ensure_dir_exists(path):
     try:
         os.makedirs(path)
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             raise
+
+## 
 
 
 def make_log_file_handles(output_dir):

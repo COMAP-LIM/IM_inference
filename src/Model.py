@@ -96,11 +96,6 @@ class PowerLawPowerSpectrum(Model):
         if_k = np.fft.ifftn(f_k) * (n_x * n_y * n_z)
         # print(self.power_spect_pl(kgrid,model_params)/volume)
 
-        if self.exp_params.map_smoothing:
-            return src.tools.gaussian_smooth(
-                if_k.real, self.exp_params.sigma_x,
-                self.exp_params.sigma_y, n_sigma=5.0)
-
         if np.any(np.isnan(if_k.real)):
             print('nan fourier coeffs')
             sys.exit()
@@ -184,11 +179,6 @@ class Mhalo_to_Lco(Model):
                                      weights=halos.Tco)
 
         # flip back frequency bins
-        if self.exp_params.map_smoothing:
-            return src.tools.gaussian_smooth(  # ????? why ::-1]
-                maps[:, :, ::-1], map_obj.sigma_x,
-                map_obj.sigma_y, n_sigma=5.0)
-
         return maps[:, :, ::-1]
 
 
@@ -285,6 +275,109 @@ class Mhalo_to_Lco_Li(Mhalo_to_Lco):
         Lcop = lir_ * beta_
         Lco = 4.9e-5 * Lcop
         Lco = self.add_log_normal_scatter(Lco, sigma_lco)
+        return Lco
+
+    @staticmethod
+    def get_sfr_table():
+        """
+        Load SFR Table
+        Columns are: z+1, logmass, logsfr, logstellarmass
+        Intermediate processing of tabulated data
+        """
+
+        tablepath = os.path.dirname(os.path.dirname(
+            os.path.realpath(__file__)))
+        tablepath += '/tables/sfr_behroozi_release.dat'
+        dat_zp1, dat_logm, dat_logsfr, _ = np.loadtxt(tablepath, unpack=True)
+
+        dat_logzp1 = np.log10(dat_zp1)
+        dat_sfr = 10.**dat_logsfr
+
+        # Reshape arrays
+        dat_logzp1 = np.unique(dat_logzp1)    # log(z), 1D
+        dat_logm = np.unique(dat_logm)    # log(Mhalo), 1D
+        dat_sfr = np.reshape(dat_sfr, (dat_logm.size, dat_logzp1.size))
+
+        # Get interpolated SFR value(s)
+        sfr_interp_tab = sp.interpolate.RectBivariateSpline(dat_logm,
+                                                            dat_logzp1,
+                                                            dat_sfr,
+                                                            kx=1, ky=1)
+        return sfr_interp_tab
+
+    @staticmethod
+    def add_log_normal_scatter(data, dex):
+        """
+        Return array x, randomly scattered by a log-normal distribution
+        with sigma=dexscatter.
+        [via @tonyyli - https://github.com/dongwooc/imapper2]
+        Note: scatter maintains mean in linear space (not log space).
+        """
+        if (dex <= 0):
+            return data
+        # Calculate random scalings
+        # Stdev in log space (DIFFERENT from stdev in linear space),
+        # note: ln(10)=2.302585
+        sigma = dex * 2.302585
+        mu = -0.5 * sigma**2
+
+        randscaling = np.random.lognormal(mu, sigma, data.shape)
+        xscattered = np.where(data > 0, data * randscaling, data)
+        return xscattered
+
+
+class Simplified_Li(Mhalo_to_Lco):
+
+    def __init__(self, exp_params, map_obj):
+        self.label = 'simp_Li'
+        self.n_params = 3
+        super().__init__(exp_params, map_obj)
+
+    def mcmc_walker_initial_positions(self, prior_params, n_walkers):
+        p_par = np.transpose(prior_params)
+        mean, sigma = p_par[0], p_par[1]
+        initial_pos = mean + sigma * np.random.randn(n_walkers, len(mean))
+        initial_pos[:, 2] = np.abs(initial_pos[:, 2])
+        return initial_pos
+
+    def ln_prior(self, model_params, prior_params):
+        ln_prior = 0.0
+        # print('model_params\n', model_params)
+        if (model_params[2] < 0):
+            return - np.infty
+        for m_par, p_par in zip(model_params, prior_params):
+            ln_prior += norm.logpdf(m_par,
+                                    loc=p_par[0],
+                                    scale=p_par[1])
+        return ln_prior
+
+    def calculate_Lco(self, halos, model_params=None):
+        global sfr_interp_tab
+        # halos = self.halos
+
+        if model_params is None:
+            # Power law parameters from paper
+            alpha, beta, sigma_tot = [
+                1.37, -1.74, 0.37]
+        else:
+            alpha, beta, sigma_tot = model_params
+
+        # Get Star formation rate
+        if sfr_interp_tab is None:
+            sfr_interp_tab = self.get_sfr_table()
+        sfr = sfr_interp_tab.ev(np.log10(halos.M),
+                                np.log10(halos.redshift + 1))
+        sfr = self.add_log_normal_scatter(sfr, sigma_tot)
+        # infrared luminosity
+        lir = sfr * 1e10
+        alphainv = 1. / alpha
+        # Lco' (observers units
+        # overflow in either of these
+        lir_ = lir**alphainv
+        beta_ = 10**(-beta * alphainv)
+
+        Lcop = lir_ * beta_
+        Lco = 4.9e-5 * Lcop
         return Lco
 
     @staticmethod
