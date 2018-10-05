@@ -133,22 +133,13 @@ def calculate_power_spec_3d(map_obj, k_bin=None):
     return Pk, k_bincents, nmodes / 2.0
 
 
-def calculate_vid(map_obj, T_bin=None):
-
-    if T_bin is None:
-        T_bin = np.linspace(np.amin(map_obj.map), np.amax(map_obj.map),
-                            np.amax(map_obj.map) + 1)
-    try:
-        B_val, T_edges = np.histogram(map_obj.map.flatten(), bins=T_bin)
-        B_val = B_val.astype(float)
-        # B_val[np.where(B_val == 0)] = 1e-3
-        T_array = (T_edges[1:] + T_edges[:-1]) / 2.
-        return B_val, T_array
-
-    except ValueError:
-        print('map=', map_obj.map)
-        print('wrong in vid calculation')
-        sys.exit()
+def calculate_vid(map_obj, T_bin):
+    B_val, T_edges = np.histogram(map_obj.map.flatten(), bins=T_bin)
+    B_val = B_val.astype(float)
+    T_array = (T_edges[1:] + T_edges[:-1]) / 2.
+    if not np.isfinite(B_val).all():
+        B_val *= np.nan
+    return B_val, T_array
 
 
 def gaussian_kernel(sigma_x, sigma_y, n_sigma=5.0):
