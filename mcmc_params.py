@@ -1,7 +1,8 @@
 import numpy as np
 
-n_walkers = 4
-n_steps = 10
+n_walkers = 48
+n_steps = 1000
+n_patches = 2
 
 # number of independent simulations of the model for each
 # step in the MCMC
@@ -9,20 +10,20 @@ n_realizations = 10
 
 likelihood = 'chi_squared'
 
-observables = ('ps')
-# observables = ('ps', 'vid')
+# observables = ('ps')
+observables = ('ps', 'vid')
 # observables =('vid')
 # model = 'wn_ps'
 # model = 'pl_ps'
-model = 'Lco_Pullen'
+# model = 'Lco_Pullen'
 # model = 'Lco_Li'
-# model = 'simp_Li'
+model = 'simp_Li'
 
 prior_params = dict()
 
 # ps_kbins = np.logspace(1, 2, 10)
 # vid_Tbins = np.logspace(2,3, 11)
-ps_kbins = np.logspace(-1.5, -0.5, 21)  # (-1.5, -0.5, 10)#10)
+ps_kbins = np.logspace(-1.5, 0.0, 21)  # (-1.5, -0.5, 10)#10)
 vid_Tbins = np.logspace(1, 2, 26)
 # vid_Tbins = np.logspace(5.7, 8, 10)  # Lco, 10x10x10
 

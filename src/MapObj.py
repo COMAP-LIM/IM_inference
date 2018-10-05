@@ -68,16 +68,16 @@ class MapObj:
         self.n_x = len(self.x) - 1
         self.n_y = len(self.y) - 1
         self.n_z = len(self.z) - 1
-        self.dx = np.abs(np.mean(np.diff(self.x)))#self.x[1] - self.x[0]
-        self.dy = np.abs(np.mean(np.diff(self.y)))#self.y[1] - self.y[0]
-        self.dz = np.abs(np.mean(np.diff(self.z)))#self.z[1] - self.z[0]
-        #self.voxel_volume = self.dx * self.dy * self.dz
+        self.dx = np.abs(np.mean(np.diff(self.x)))
+        self.dy = np.abs(np.mean(np.diff(self.y)))
+        self.dz = np.abs(np.mean(np.diff(self.z)))
+        self.voxel_volume = self.dx * self.dy * self.dz
         self.volume = ((self.x[-1] - self.x[0])
                        * (self.y[-1] - self.y[0])
                        * (self.z[-1] - self.z[0])
                        )
         self.n_vox = self.n_nu_bins * self.n_pix_x * self.n_pix_y
-        self.voxel_volume = self.volume / self.n_vox
+        # self.voxel_volume = self.volume / self.n_vox
         self.map = None
 
     def calculate_observables(self, Observables):
@@ -85,5 +85,5 @@ class MapObj:
             observable.calculate_observable(self)
 
     def generate_noise_map(self):
-        return self.exp_params.sigma_T * np.random.randn(self.n_x,
-                                                         self.n_y, self.n_z)
+        return self.exp_params.sigma_T * np.random.randn(
+            self.n_x, self.n_y, self.n_z)

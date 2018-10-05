@@ -68,7 +68,7 @@ def lnprob(model_params, model, observables, map_obj):
                 src.likelihoods.ln_chi_squared(
                     observable.data,
                     observable.mean,
-                    observable.independent_var
+                    observable.independent_var / mcmc_params.n_patches
                 )
     elif (mcmc_params.likelihood == 'chi_squared_cov'):
         n_data = len(mcmc_params.cov_mat_0[:, 0])
@@ -86,7 +86,7 @@ def lnprob(model_params, model, observables, map_obj):
             np.outer(ind_var, ind_var)
             / np.outer(mcmc_params.ind_var_0, mcmc_params.ind_var_0)
         )
-        cov_mat = mcmc_params.cov_mat_0 * var_ratio
+        cov_mat = mcmc_params.cov_mat_0 * var_ratio / mcmc_params.n_patches
         ln_likelihood += src.likelihoods.ln_chi_squared_cov(
             data, mean, cov_mat)
 

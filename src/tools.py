@@ -63,30 +63,44 @@ def insert_data(data, observables):
 
 
 def get_data(mcmc_params, exp_params, model, observables, map_obj):
-
+    maps = np.zeros((
+        mcmc_params.n_patches,
+        map_obj.n_x,
+        map_obj.n_y,
+        map_obj.n_z
+    ))
     if not mcmc_params.generate_file:
         print('opening map data file')
-        map_obj.map = np.load(mcmc_params.map_filename)
-
+        maps = np.load(mcmc_params.map_filename)
     else:
         model_params = mcmc_params.model_params_true[model.label]
-        map_obj.map = src.tools.gaussian_smooth(
-            model.generate_map(model_params), map_obj.sigma_x,
-            map_obj.sigma_y) + map_obj.generate_noise_map()
-        if mcmc_params.save_file:
-            print('saving map to file')
-            np.save(mcmc_params.map_filename, map_obj.map)
-
-    map_obj.calculate_observables(observables)
-
+        for i in range(mcmc_params.n_patches):
+            maps[i] = src.tools.gaussian_smooth(
+                model.generate_map(model_params), map_obj.sigma_x,
+                map_obj.sigma_y) + map_obj.generate_noise_map()
+    if mcmc_params.save_file:
+        print('saving map to file')
+        np.save(mcmc_params.map_filename, maps)
+    
     data = dict()
+    for i in range(mcmc_params.n_patches):
+        map_obj.map = maps[i]
+        map_obj.calculate_observables(observables)
 
-    for observable in observables:
-        data[observable.label] = observable.values
-        print(observable.label, observable.values)
-        if 0 in observable.values:
-            print('some of data values are equal to 0')
-            sys.exit()
+
+
+        for observable in observables:
+            if i == 0:
+                data[observable.label] = (
+                    observable.values / mcmc_params.n_patches
+                )
+            else:
+                data[observable.label] += (
+                    observable.values / mcmc_params.n_patches
+                )
+
+            if 0 in observable.values:
+                print('some of data values are equal to 0')
 
     insert_data(data, observables)
     return data
@@ -206,11 +220,14 @@ def write_log_file(mcmc_log_fp, samples_log_fp, start_time, samples):
         log_file.write('Time start of run     : %s \n' % (start_time))
         log_file.write('Time end of run       : %s \n' %
                        (datetime.datetime.now()))
-        tot_time = (datetime.datetime.now() - start_time).total_seconds()
-        log_file.write('Total execution time  : %.1f seconds \n' % (
-                       tot_time))
-        log_file.write('Total execution time  : %.1f minutes \n' % (
-                       (tot_time / 60)))
+        tot_time = (datetime.datetime.now() - start_time)
+        log_file.write('Total execution time  : %s \n' %
+                       tot_time)
+        # tot_time = (datetime.datetime.now() - start_time).total_seconds()
+        # log_file.write('Total execution time  : %.1f seconds \n' % (
+        #                tot_time))
+        # log_file.write('Total execution time  : %.1f minutes \n' % (
+        #                (tot_time / 60)))
         np.save(samples_log_fp, samples)
         n_steps, n_walkers, n_params = samples.shape
         samples = samples.reshape(n_steps * n_walkers, n_params)
@@ -243,15 +260,18 @@ class empty_table():
 
 def load_peakpatch_catalogue(filein):
     """
-    Load peak patch halo catalogue into halos class and cosmology into cosmo class
+    Load peak patch halo catalogue into halos
+    class and cosmology into cosmo class
 
     Returns
     -------
     halos : class
         Contains all halo information (position, redshift, etc..)
     """
-    halos = empty_table()            # creates empty class to put any halo info into
-    cosmo = empty_table()            # creates empty class to put any cosmology info into  
+    # creates empty class to put any halo info into
+    halos = empty_table()
+    # creates empty class to put any cosmology info into
+    cosmo = empty_table()
 
     halo_info = np.load(filein)
 
