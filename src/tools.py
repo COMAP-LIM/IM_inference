@@ -87,8 +87,6 @@ def get_data(mcmc_params, exp_params, model, observables, map_obj):
         map_obj.map = maps[i]
         map_obj.calculate_observables(observables)
 
-
-
         for observable in observables:
             if i == 0:
                 data[observable.label] = (

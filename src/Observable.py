@@ -60,6 +60,6 @@ class Voxel_Intensity_Distribution(Observable):
     
     def calculate_mean(self, n):
         self.mean = self.sum / n
-    self.mean[np.where(self.mean == 0)] = 1e-2
+        self.mean[np.where(self.mean == 0)] = 1e-2
         self.sum = None
         self.independent_variance()

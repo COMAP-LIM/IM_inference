@@ -1,3 +1,5 @@
+# To run: screen -dm bash -c 'script -c "mpiexec -n 48 python run_mcmc.py" output.txt' 
+
 """
 Script to do MCMC inference from data.
 
