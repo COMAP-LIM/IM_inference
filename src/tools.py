@@ -134,11 +134,12 @@ def calculate_power_spec_3d(map_obj, k_bin=None):
 
 
 def calculate_vid(map_obj, T_bin):
-    B_val, T_edges = np.histogram(map_obj.map.flatten(), bins=T_bin)
-    B_val = B_val.astype(float)
-    T_array = (T_edges[1:] + T_edges[:-1]) / 2.
-    if not np.isfinite(B_val).all():
-        B_val *= np.nan
+    T_array = (T_bin[1:] + T_bin[:-1]) / 2.
+    if not np.isfinite(map_obj.map.flatten()).all():
+        B_val = np.zeros_like(T_array) + np.nan
+    else:
+        B_val, _ = np.histogram(map_obj.map.flatten(), bins=T_bin)
+        B_val = B_val.astype(float)
     return B_val, T_array
 
 
