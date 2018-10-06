@@ -68,6 +68,7 @@ model_params_true['simp_Li'] = [1.17, 0.21, 0.5]
 
 map_filename = 'trial4.npy'
 samples_filename = 'samples_lco_test4.npy'
+run_log_file = 'run_log.txt'
 
 output_dir = 'testing_output'
 generate_file = True

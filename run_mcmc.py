@@ -64,13 +64,17 @@ def lnprob(model_params, model, observables, map_obj):
 
     # calculate the actual likelihoods
     ln_likelihood = 0.0
+    n_samp = mcmc_params.n_realizations / mcmc_params.n_patches
     if (mcmc_params.likelihood == 'chi_squared'):
         for observable in observables:
             ln_likelihood += \
                 src.likelihoods.ln_chi_squared(
                     observable.data,
                     observable.mean,
-                    observable.independent_var / mcmc_params.n_patches
+                    (1 + n_samp) / n_samp * (
+                        observable.independent_var
+                        / mcmc_params.n_patches
+                    )
                 )
     elif (mcmc_params.likelihood == 'chi_squared_cov'):
         n_data = len(mcmc_params.cov_mat_0[:, 0])
@@ -88,7 +92,9 @@ def lnprob(model_params, model, observables, map_obj):
             np.outer(ind_var, ind_var)
             / np.outer(mcmc_params.ind_var_0, mcmc_params.ind_var_0)
         )
-        cov_mat = mcmc_params.cov_mat_0 * var_ratio / mcmc_params.n_patches
+        cov_mat = (1 + n_samp) / n_samp * (
+            mcmc_params.cov_mat_0 * var_ratio / mcmc_params.n_patches
+        )
         ln_likelihood += src.likelihoods.ln_chi_squared_cov(
             data, mean, cov_mat)
 
@@ -101,13 +107,16 @@ def lnprob(model_params, model, observables, map_obj):
 if __name__ == "__main__":
     if mcmc_params.pool: 
         pool = MPIPool(loadbalance=True)
+        n_pool = pool.size + 1
         if not pool.is_master():
             pool.wait()
             sys.exit(0)
-
+    else:
+        n_pool = mcmc_params.n_threads
     start_time = datetime.datetime.now()
     mcmc_chains_fp, mcmc_log_fp, samples_log_fp, runid = \
-        src.tools.make_log_file_handles(mcmc_params.output_dir)
+        src.tools.set_up_log(mcmc_params.output_dir,
+                             mcmc_params, n_pool)
     src.tools.make_picklable(exp_params, mcmc_params)
 
     model, observables, map_obj = src.tools.set_up_mcmc(
@@ -150,4 +159,5 @@ if __name__ == "__main__":
                          
     np.save(mcmc_params.samples_filename, samples)
 
-    src.tools.write_log_file(mcmc_log_fp, samples_log_fp, start_time, samples)
+    src.tools.write_log_file(mcmc_log_fp, samples_log_fp,
+                             start_time, samples, n_pool)

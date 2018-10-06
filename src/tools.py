@@ -7,6 +7,7 @@ import copyreg
 import copy
 import datetime
 import os
+import socket
 import errno
 import shutil
 import src.MapObj
@@ -167,7 +168,7 @@ def ensure_dir_exists(path):
             raise
 
 
-def make_log_file_handles(output_dir):
+def set_up_log(output_dir, mcmc_params, n_pool):
     ensure_dir_exists(output_dir + '/params')
     ensure_dir_exists(output_dir + '/chains')
     ensure_dir_exists(output_dir + '/log_files')
@@ -179,6 +180,22 @@ def make_log_file_handles(output_dir):
             'mcmc_params_run{0:d}.py'.format(runid))):
         runid += 1
     print('Current run_id: %i' % runid)
+
+    if os.path.isfile(mcmc_params.run_log_file):
+        with open(mcmc_params.run_log_file, 'r') as run_file:
+            save = run_file.read()
+            run_file.close()
+    else:
+        save = ''
+    with open(mcmc_params.run_log_file, 'w') as run_file:
+        run_file.write('starting run: %i on %s with %i procs, %s \n' % (
+            runid, socket.gethostname(), n_pool, datetime.datetime.now()
+        ))
+        run_file.close()
+    with open(mcmc_params.run_log_file, 'a') as run_file:
+        run_file.write(save)
+        run_file.close()
+    
     mcmc_params_fp = os.path.join(output_dir, 'params',
                                   'mcmc_params_run{0:d}.py'.format(runid))
     exp_params_fp = os.path.join(output_dir, 'params',
@@ -200,7 +217,7 @@ def make_log_file_handles(output_dir):
     return mcmc_chains_fp, mcmc_log_fp, samples_log_fp, runid
 
 
-def write_log_file(mcmc_log_fp, samples_log_fp, start_time, samples):
+def write_log_file(mcmc_log_fp, samples_log_fp, start_time, samples, n_pool):
     if len(sys.argv) < 2:
         mcmc_file = 'mcmc_params.py'
     else:
@@ -229,8 +246,13 @@ def write_log_file(mcmc_log_fp, samples_log_fp, start_time, samples):
             median = np.median(samples[n_cut:, i])
             constraints = np.percentile(samples[n_cut:, i], percentiles) - median
             log_file.write('Parameter %i: %.3f +%.3f %.3f \n' % (
-                i, median, constraints[1], constraints[0]))
+                i, median, constraints[1], constraints[0]
+            ))
+        log_file.write('Run on %s with %i processes' % (
+            socket.gethostname(), n_pool
+        ))
         log_file.write('\nmcmc_params.py: \n' + param_file.read())
+
         print('Execution time:', datetime.datetime.now() - start_time)
 
 
