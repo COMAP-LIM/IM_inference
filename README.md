@@ -7,6 +7,7 @@ TODO:
 - Include additional model output (e.g. luminosity functions)
 - Automatically run on same input data as previous run
 - Automatically run on same experiment and mcmc setup as previous run
+- Continue from state of previous run
 - Lots of ideas for different models to compare
 
 In progress: 
