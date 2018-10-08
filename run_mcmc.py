@@ -1,4 +1,4 @@
-# To run: screen -dm bash -c 'script -c "mpiexec -n 48 python run_mcmc.py" output.txt' 
+# To run: screen -dm bash -c 'script -c "mpiexec -n 48 python run_mcmc.py" output.txt'
 
 """
 Script to do MCMC inference from data.
@@ -105,11 +105,12 @@ def lnprob(model_params, model, observables, map_obj):
     if not np.isfinite(ln_likelihood):
         return -np.infty
 
-    return ln_prior + ln_likelihood
+    return ln_prior + ln_likelihood, observables
 
 
 if __name__ == "__main__":
-    if mcmc_params.pool: 
+    src.tools.make_picklable(exp_params, mcmc_params)
+    if mcmc_params.pool:
         pool = MPIPool(loadbalance=True)
         n_pool = pool.size + 1
         if not pool.is_master():
@@ -118,10 +119,9 @@ if __name__ == "__main__":
     else:
         n_pool = mcmc_params.n_threads
     start_time = datetime.datetime.now()
-    mcmc_chains_fp, mcmc_log_fp, samples_log_fp, runid = \
+    mcmc_chains_fp, mcmc_log_fp, samples_log_fp, blob_fp, runid = \
         src.tools.set_up_log(mcmc_params.output_dir,
                              mcmc_params, n_pool)
-    src.tools.make_picklable(exp_params, mcmc_params)
 
     model, observables, map_obj = src.tools.set_up_mcmc(
         mcmc_params, exp_params)
@@ -136,6 +136,7 @@ if __name__ == "__main__":
         sampler = emcee.EnsembleSampler(
             mcmc_params.n_walkers, model.n_params, lnprob,
             args=(model, observables, map_obj), threads=mcmc_params.n_threads)
+
     pos = model.mcmc_walker_initial_positions(
         mcmc_params.prior_params[model.label], mcmc_params.n_walkers)
     samples = np.zeros((mcmc_params.n_steps,
@@ -143,24 +144,21 @@ if __name__ == "__main__":
                         model.n_params))
 
     i = 0
-    
+
     while i < mcmc_params.n_steps:
         print('starting iteration %i out of %i of run %i' % (
             i + 1, mcmc_params.n_steps, runid),
             datetime.datetime.now() - start_time)
         sys.stdout.flush()
         for result in sampler.sample(pos, iterations=1, storechain=True):
-            samples[i], _, blobs = result
-            pos = samples[i]
-            with open(mcmc_chains_fp, 'a') as chains_file:
-                for j in range(mcmc_params.n_walkers):
-                    chains_file.write('{0:4d} {1:s}\n'.format(                                                     
-                        j, ' '.join([str(p) for p in pos[j]])))
-            sys.stdout.flush()
+            pos, _, _, blobs = result
+            samples[i] = pos
+            src.tools.write_state_to_file(pos, blobs, mcmc_chains_fp,
+                                          blob_fp, mcmc_params, runid)
             i += 1
     if mcmc_params.pool:
         pool.close()
-                         
+
     np.save(mcmc_params.samples_filename, samples)
 
     src.tools.write_log_file(mcmc_log_fp, samples_log_fp,

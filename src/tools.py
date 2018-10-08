@@ -239,7 +239,7 @@ def set_up_log(output_dir, mcmc_params, n_pool):
     ensure_dir_exists(output_dir + '/chains')
     ensure_dir_exists(output_dir + '/log_files')
     ensure_dir_exists(output_dir + '/samples')
-
+    ensure_dir_exists(output_dir + '/blob')
     runid = 0
     while os.path.isfile(os.path.join(
             output_dir, 'params',
@@ -279,8 +279,28 @@ def set_up_log(output_dir, mcmc_params, n_pool):
                                'mcmc_log_run{0:d}.txt'.format(runid))
     samples_log_fp = os.path.join(output_dir, 'samples',
                                   'samples_log_run{0:d}.npy'.format(runid))
+    blob_fp = os.path.join(output_dir, 'blob', 'blob_')
 
-    return mcmc_chains_fp, mcmc_log_fp, samples_log_fp, runid
+    return mcmc_chains_fp, mcmc_log_fp, samples_log_fp, blob_fp, runid
+
+
+def write_state_to_file(
+        pos, blobs, mcmc_chains_fp,
+        blob_fp, mcmc_params, runid):
+    with open(mcmc_chains_fp, 'a') as chains_file:
+        for j in range(mcmc_params.n_walkers):
+            chains_file.write('{0:4d} {1:s}\n'.format(
+                j, ' '.join([str(p) for p in pos[j]])))
+    for obs in mcmc_params.observables:
+        with open(blob_fp + obs + '_' + str(runid) + '.dat', 'a') as blob_file:
+            for j in range(mcmc_params.n_walkers):
+                for o in blobs[j]:
+                    if o.label == obs:
+                        obs_data = o.mean
+                        break
+                blob_file.write('{0:4d} {1:s}\n'.format(
+                    j, ' '.join([str(d) for d in obs_data])))
+    sys.stdout.flush()
 
 
 def write_log_file(mcmc_log_fp, samples_log_fp, start_time, samples, n_pool):
@@ -301,7 +321,7 @@ def write_log_file(mcmc_log_fp, samples_log_fp, start_time, samples, n_pool):
         n_steps, n_walkers, n_params = samples.shape
         samples = samples.reshape(n_steps * n_walkers, n_params)
         n_par = len(samples[0, :])
-        percentiles = [16, 68 + 16]  # fix at some point
+        percentiles = [15.87, 68.27 + 15.87]  # fix at some point
         n_cut = samples.shape[0] // 2
         log_file.write('\nPosterior parameter constraints: \n')
         for i in range(n_par):
