@@ -49,8 +49,7 @@ def lnprob(model_params, model, observables, map_obj):
     ln_prior = 0.0
     ln_prior += model.ln_prior(model_params,
                                mcmc_params.prior_params[model.label])
-    if not np.isfinite(ln_prior):
-        return -np.infty
+    
     for i in range(mcmc_params.n_realizations):
         if exp_params.map_smoothing:
             map_obj.map = src.tools.create_smoothed_map(
@@ -102,8 +101,8 @@ def lnprob(model_params, model, observables, map_obj):
         ln_likelihood += src.likelihoods.ln_chi_squared_cov(
             data, mean, cov_mat)
 
-    if not np.isfinite(ln_likelihood):
-        return -np.infty
+    if not np.isfinite(ln_likelihood + ln_prior):
+        return -np.infty, observables
 
     return ln_prior + ln_likelihood, observables
 
