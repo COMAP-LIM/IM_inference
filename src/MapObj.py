@@ -29,10 +29,10 @@ class MapObj:
         self.z_f = self.nu_rest/self.nu_f - 1
 
         # instrumental beam
-        exp_params.sigma_x = self.FWHM/60.*np.pi/180. / np.sqrt(8 * np.log(2))
-        exp_params.sigma_y = self.FWHM/60.*np.pi/180. / np.sqrt(8 * np.log(2))
-        self.sigma_x = exp_params.sigma_x
-        self.sigma_y = exp_params.sigma_y
+        # exp_params.sigma_x = self.FWHM/60. * np.pi/180. / np.sqrt(8 * np.log(2))  # Don't think this makes sense!!
+        # exp_params.sigma_y = self.FWHM/60. * np.pi/180. / np.sqrt(8 * np.log(2))
+        # self.sigma_x = exp_params.sigma_x
+        # self.sigma_y = exp_params.sigma_y
 
         # map frequency dimension
         # negative steps as larger observed frequency means lower redshift

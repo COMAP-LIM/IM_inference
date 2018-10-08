@@ -2,7 +2,9 @@ import numpy as np
 
 cosmology = 'Planck15'  # must be an astropy compatible cosmology
 
+map_smoothing = True
 FWHM = 4  # arcmin Haavard, Pullen
+resolution_factor = 4  # how much finer resolution to use for pixels in high-res map before smoothing
 # FWHM = 6  # arcmin Li
 
 n_pix_x = 22  # no of pixels
@@ -11,7 +13,7 @@ n_pix_y = 22
 # should be calculated later
 # sigma_T = 11.#2.75#1e9  # muK, noise Haavard
 sigma_T = 11 * np.sqrt(2)  # 11.0  # 11  # 41.5/np.sqrt(40)#23.25# MuK, Li,  2*11 = 1500 h
-map_smoothing = True
+
 
 halo_catalogue_folder = 'catalogues/'
 

@@ -1,12 +1,12 @@
 import numpy as np
 
 n_walkers = 48
-n_steps = 1000
+n_steps = 2000
 n_patches = 2
 
 # number of independent simulations of the model for each
 # step in the MCMC
-n_realizations = 40
+n_realizations = 10
 
 likelihood = 'chi_squared'
 
@@ -55,7 +55,7 @@ prior_params['Lco_Li'] = [
 prior_params['simp_Li'] = [
     [1.17, 0.37],	 # alpha - log10 slope
     [0.21, 3.74],	 # beta - log10 intercept
-    [0.5, 0.3],	 # sigma_tot
+    [0.5, 0.2],	     # sigma_tot
 ]
 
 
@@ -64,7 +64,7 @@ model_params_true['wn_ps'] = [8.3]  # sigma_T for wn_ps
 model_params_true['pl_ps'] = [8., 1.]  # A and alpha for pw_ps
 model_params_true['Lco_Pullen'] = [-7.3]  # np.log10(1e6/5e11)]
 model_params_true['Lco_Li'] = [0.0, 1.17, 0.21, 0.3, 0.3]  # [0.0, 1.37, -1.74, 0.3, 0.3]
-model_params_true['simp_Li'] = [1.17, 0.21, 0.5]
+model_params_true['simp_Li'] = [1.17, 0.21, 0.5]  # alpha, beta, sigma_tot
 
 map_filename = 'trial4.npy'
 samples_filename = 'samples_lco_test4.npy'

@@ -52,9 +52,13 @@ def lnprob(model_params, model, observables, map_obj):
     if not np.isfinite(ln_prior):
         return -np.infty
     for i in range(mcmc_params.n_realizations):
-        map_obj.map = src.tools.gaussian_smooth(
-            model.generate_map(model_params), map_obj.sigma_x,
-            map_obj.sigma_y) + map_obj.generate_noise_map()
+        if exp_params.map_smoothing:
+            map_obj.map = src.tools.create_smoothed_map(
+                model, model_params
+            ) + map_obj.generate_noise_map()
+        else:
+            map_obj.map = model.generate_map(
+                model_params) + map_obj.generate_noise_map()
         map_obj.map -= np.mean(map_obj.map.flatten())
         map_obj.calculate_observables(observables)
         for observable in observables:

@@ -76,16 +76,20 @@ def get_data(mcmc_params, exp_params, model, observables, map_obj):
     else:
         model_params = mcmc_params.model_params_true[model.label]
         for i in range(mcmc_params.n_patches):
-            maps[i] = src.tools.gaussian_smooth(
-                model.generate_map(model_params), map_obj.sigma_x,
-                map_obj.sigma_y) + map_obj.generate_noise_map()
+            if exp_params.map_smoothing:
+                maps[i] = create_smoothed_map(
+                    model, model_params
+                ) + map_obj.generate_noise_map()
+            else:
+                maps[i] = model.generate_map(
+                    model_params) + map_obj.generate_noise_map()
     if mcmc_params.save_file:
         print('saving map to file')
         np.save(mcmc_params.map_filename, maps)
-    
+
     data = dict()
     for i in range(mcmc_params.n_patches):
-        map_obj.map = maps[i]
+        map_obj.maps = maps[i]
         map_obj.calculate_observables(observables)
 
         for observable in observables:
@@ -107,9 +111,9 @@ def get_data(mcmc_params, exp_params, model, observables, map_obj):
 
 def calculate_power_spec_3d(map_obj, k_bin=None):
 
-    kx = np.fft.fftfreq(map_obj.n_x, d=map_obj.dx) * 2*np.pi
-    ky = np.fft.fftfreq(map_obj.n_y, d=map_obj.dy) * 2*np.pi
-    kz = np.fft.fftfreq(map_obj.n_z, d=map_obj.dz) * 2*np.pi
+    kx = np.fft.fftfreq(map_obj.n_x, d=map_obj.dx) * 2 * np.pi
+    ky = np.fft.fftfreq(map_obj.n_y, d=map_obj.dy) * 2 * np.pi
+    kz = np.fft.fftfreq(map_obj.n_z, d=map_obj.dz) * 2 * np.pi
     kgrid = np.sqrt(sum(ki**2 for ki in np.meshgrid(kx, ky, kz,
                                                     indexing='ij')))
 
@@ -144,11 +148,28 @@ def calculate_vid(map_obj, T_bin):
     return B_val, T_array
 
 
+def degrade(largemap, factor, axes=[0, 1]):
+    dims = np.array(largemap.shape)[axes]
+    rows, cols = dims // factor
+    if any(dims % factor > 0):
+        print("Invalid degration factor!")
+        sys.exit()
+    if len(largemap.shape) == 3:
+        return largemap.reshape(
+            rows, largemap.shape[0] // rows,
+            cols, largemap.shape[1] // cols,
+            largemap.shape[2]).mean(axis=1).mean(axis=2)
+    else:
+        return largemap.reshape(
+            rows, largemap.shape[0] // rows,
+            cols, largemap.shape[1] // cols).mean(axis=1).mean(axis=2)
+
+
 def gaussian_kernel(sigma_x, sigma_y, n_sigma=5.0):
     size_y = int(n_sigma * sigma_y)
     size_x = int(n_sigma * sigma_x)
     y, x = scipy.mgrid[-size_y:size_y + 1, -size_x:size_x + 1]
-    g = np.exp(-(x**2/(2.*sigma_x**2) + y**2/(2.*sigma_y**2)))
+    g = np.exp(-(x**2 / (2. * sigma_x**2) + y**2 / (2. * sigma_y**2)))
     return g / g.sum()
 
 
@@ -158,7 +179,52 @@ def gaussian_smooth(mymap, sigma_x, sigma_y, n_sigma=5.0):
     return smoothed_map
 
 
-## From Tony Li
+def create_smoothed_map(model, model_params):
+    exp_params = model.exp_params
+    factor = exp_params.resolution_factor
+
+    # make high-resolution grid to make map
+    model.map_obj.Ompix /= factor * factor
+
+    model.map_obj.pix_binedges_x = np.linspace(
+        model.map_obj.pix_binedges_x[0], model.map_obj.pix_binedges_x[-1],
+        factor * (len(model.map_obj.pix_binedges_x) - 1) + 1)
+
+    model.map_obj.pix_binedges_y = np.linspace(
+        model.map_obj.pix_binedges_y[0], model.map_obj.pix_binedges_y[-1],
+        factor * (len(model.map_obj.pix_binedges_y) - 1) + 1)
+    # make high-resolution map
+    model.map_obj.map = model.generate_map(model_params)
+
+    pixwidth = (
+        model.map_obj.pix_binedges_x[1] - model.map_obj.pix_binedges_x[0]
+    ) * 60
+
+    sigma = exp_params.FWHM / pixwidth / np.sqrt(8 * np.log(2))
+    # convolve map with gaussian beam
+    model.map_obj.map = gaussian_smooth(model.map_obj.map, sigma, sigma)
+
+    # plt.figure()
+    # plt.imshow(filteredmap[:, :, 0], interpolation='none')
+    # plt.show()
+    
+    # change grid to low resolution again
+    model.map_obj.Ompix *= factor * factor
+
+    model.map_obj.pix_binedges_x = np.linspace(
+        model.map_obj.pix_binedges_x[0], model.map_obj.pix_binedges_x[-1],
+        (len(model.map_obj.pix_binedges_x) - 1) / factor + 1)
+
+    model.map_obj.pix_binedges_y = np.linspace(
+        model.map_obj.pix_binedges_y[0], model.map_obj.pix_binedges_y[-1],
+        (len(model.map_obj.pix_binedges_y) - 1) / factor + 1)
+    
+    # degrade map back to low-res grid
+    model.map_obj.map = degrade(model.map_obj.map, factor)
+    return model.map_obj.map
+
+
+# From Tony Li
 
 def ensure_dir_exists(path):
     try:
@@ -212,7 +278,7 @@ def set_up_log(output_dir, mcmc_params, n_pool):
     mcmc_log_fp = os.path.join(output_dir, 'log_files',
                                'mcmc_log_run{0:d}.txt'.format(runid))
     samples_log_fp = os.path.join(output_dir, 'samples',
-                                 'samples_log_run{0:d}.npy'.format(runid))
+                                  'samples_log_run{0:d}.npy'.format(runid))
 
     return mcmc_chains_fp, mcmc_log_fp, samples_log_fp, runid
 
@@ -230,11 +296,7 @@ def write_log_file(mcmc_log_fp, samples_log_fp, start_time, samples, n_pool):
         tot_time = (datetime.datetime.now() - start_time)
         log_file.write('Total execution time  : %s \n' %
                        tot_time)
-        # tot_time = (datetime.datetime.now() - start_time).total_seconds()
-        # log_file.write('Total execution time  : %.1f seconds \n' % (
-        #                tot_time))
-        # log_file.write('Total execution time  : %.1f minutes \n' % (
-        #                (tot_time / 60)))
+
         np.save(samples_log_fp, samples)
         n_steps, n_walkers, n_params = samples.shape
         samples = samples.reshape(n_steps * n_walkers, n_params)
@@ -244,7 +306,8 @@ def write_log_file(mcmc_log_fp, samples_log_fp, start_time, samples, n_pool):
         log_file.write('\nPosterior parameter constraints: \n')
         for i in range(n_par):
             median = np.median(samples[n_cut:, i])
-            constraints = np.percentile(samples[n_cut:, i], percentiles) - median
+            constraints = np.percentile(
+                samples[n_cut:, i], percentiles) - median
             log_file.write('Parameter %i: %.3f +%.3f %.3f \n' % (
                 i, median, constraints[1], constraints[0]
             ))
@@ -314,22 +377,22 @@ def load_peakpatch_catalogue(filein):
     halos.nhalo = len(halos.M)
 
     halos.chi = np.sqrt(halos.x_pos**2 + halos.y_pos**2 + halos.z_pos**2)
-    halos.ra = np.arctan2(-halos.x_pos, halos.z_pos) * 180./np.pi - cen_x_fov
-    halos.dec = np.arcsin(halos.y_pos / halos.chi) * 180./np.pi - cen_y_fov
+    halos.ra = np.arctan2(-halos.x_pos, halos.z_pos) * 180. / np.pi - cen_x_fov
+    halos.dec = np.arcsin(halos.y_pos / halos.chi) * 180. / np.pi - cen_y_fov
 
     assert np.max(halos.M) < 1.e17, "Halos seem too massive"
 
     return halos, cosmo
 
 
-def cull_peakpatch_catalogue(halos, min_mass, mapinst):
+def cull_peakpatch_catalogue(halos, min_mass, map_obj):
     """
     crops the halo catalogue to only include desired halos
     """
-    dm = [(halos.M > min_mass) * (halos.redshift >= mapinst.z_i)
-                               * (np.abs(halos.ra) <= mapinst.fov_x / 2)
-                               * (np.abs(halos.dec) <= mapinst.fov_y / 2)
-                               * (halos.redshift <= mapinst.z_f)]
+    dm = [(halos.M > min_mass) * (halos.redshift >= map_obj.z_i)
+                               * (np.abs(halos.ra) <= map_obj.fov_x / 2)
+                               * (np.abs(halos.dec) <= map_obj.fov_y / 2)
+                               * (halos.redshift <= map_obj.z_f)]
 
     for i in dir(halos):
         if i[0] == '_':
