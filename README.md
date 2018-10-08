@@ -15,7 +15,6 @@ In progress:
 log file
       - save experiment params as well
       - save exact command used when running current script in log file (e.g. python run_mcmc.py experiment_params_comap_lignt.py mcmc_params_full_parallell.py)
-- Add instrumental beam (fix this)
 - Parallellization (fix issue with big halo objects)
 - Implement cosmology (angles, redshift, Mpc etc.) (Check and fix this)
 
@@ -25,3 +24,4 @@ Done:
 - Add instrumental noise
 - Log file could summirize results (e.g. theta = 2.3 +- 0.21)
 - Let run_mcmc be run with parameter files as command line arguments instead to use them instead of the default ones
+- Add instrumental beam
