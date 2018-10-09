@@ -18,6 +18,7 @@ log file
       - save exact command used when running current script in log file (e.g. python run_mcmc.py experiment_params_comap_lignt.py mcmc_params_full_parallell.py)
 - Parallellization (fix issue with big halo objects)
 - Implement cosmology (angles, redshift, Mpc etc.) (Check and fix this)
+      - Decide on consitent way of defining, dx, dy, dz, v_vox and v_full
 
 Done:
 - Sampling initial points from priors
