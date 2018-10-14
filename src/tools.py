@@ -89,7 +89,7 @@ def get_data(mcmc_params, exp_params, model, observables, map_obj):
 
     data = dict()
     for i in range(mcmc_params.n_patches):
-        map_obj.maps = maps[i]
+        map_obj.map = maps[i]
         map_obj.calculate_observables(observables)
 
         for observable in observables:
