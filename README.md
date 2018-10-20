@@ -1,7 +1,6 @@
 Code to do inference from line intensity maps
 
 TODO:
-- Save imput data in log
 - Implement functions to calculate covariance matrices
 - Tests, and automatic tests (pytest?)
 - Make "COMAP Light" experiment setup (same as COMAP only smaller redshift range for faster runtime)
@@ -21,6 +20,7 @@ log file
       - Decide on consitent way of defining, dx, dy, dz, v_vox and v_full
 
 Done:
+- Save imput data in log
 - Sampling initial points from priors
 - Create function to automatically generate mock data
 - Add instrumental noise
