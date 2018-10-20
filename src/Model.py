@@ -367,7 +367,6 @@ class Simplified_Li(Mhalo_to_Lco):
             sfr_interp_tab = self.get_sfr_table()
         sfr = sfr_interp_tab.ev(np.log10(halos.M),
                                 np.log10(halos.redshift + 1))
-        sfr = self.add_log_normal_scatter(sfr, sigma_tot)
         # infrared luminosity
         lir = sfr * 1e10
         alphainv = 1. / alpha
@@ -378,6 +377,7 @@ class Simplified_Li(Mhalo_to_Lco):
 
         Lcop = lir_ * beta_
         Lco = 4.9e-5 * Lcop
+        Lco = self.add_log_normal_scatter(Lco, sigma_tot)
         return Lco
 
     @staticmethod

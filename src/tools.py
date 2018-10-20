@@ -84,6 +84,7 @@ def get_data(mcmc_params, exp_params, model,
             else:
                 maps[i] = model.generate_map(
                     model_params) + map_obj.generate_noise_map()
+            maps[i] -= np.mean(maps[i].flatten())
     if mcmc_params.save_file:
         print('saving map to file')
         np.save(mcmc_params.map_filename, maps)
