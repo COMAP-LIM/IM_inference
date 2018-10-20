@@ -10,9 +10,9 @@ n_realizations = 10
 
 likelihood = 'chi_squared'
 
-# observables = ('ps')
+# observables = ('ps',)
 observables = ('ps', 'vid')
-# observables =('vid')
+# observables =('vid',)
 # model = 'wn_ps'
 # model = 'pl_ps'
 # model = 'Lco_Pullen'
