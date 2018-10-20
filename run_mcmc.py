@@ -26,6 +26,7 @@ import sys
 import os
 import datetime
 import importlib
+import inspect
 
 os.environ["OMP_NUM_THREADS"] = "1"
 
@@ -35,6 +36,8 @@ if len(sys.argv) < 2:
 else:
     mcmc_params = importlib.import_module(sys.argv[1][:-3])
     exp_params = importlib.import_module(sys.argv[2][:-3])
+mcmc_src = inspect.getsource(mcmc_params)
+exp_src = inspect.getsource(exp_params)
 
 
 def lnprob(model_params, model, observables, map_obj):
@@ -49,7 +52,7 @@ def lnprob(model_params, model, observables, map_obj):
     ln_prior = 0.0
     ln_prior += model.ln_prior(model_params,
                                mcmc_params.prior_params[model.label])
-    
+
     for i in range(mcmc_params.n_realizations):
         if exp_params.map_smoothing:
             map_obj.map = src.tools.create_smoothed_map(
@@ -120,12 +123,14 @@ if __name__ == "__main__":
     start_time = datetime.datetime.now()
     mcmc_chains_fp, mcmc_log_fp, samples_log_fp, blob_fp, runid = \
         src.tools.set_up_log(mcmc_params.output_dir,
-                             mcmc_params, n_pool)
+                             mcmc_params, mcmc_src,
+                             exp_src, n_pool)
 
     model, observables, map_obj = src.tools.set_up_mcmc(
         mcmc_params, exp_params)
 
-    src.tools.get_data(mcmc_params, exp_params, model, observables, map_obj)
+    src.tools.get_data(mcmc_params, exp_params, model,
+                       observables, map_obj, runid)
 
     if mcmc_params.pool:
         sampler = emcee.EnsembleSampler(
@@ -161,4 +166,5 @@ if __name__ == "__main__":
     np.save(mcmc_params.samples_filename, samples)
 
     src.tools.write_log_file(mcmc_log_fp, samples_log_fp,
-                             start_time, samples, n_pool)
+                             start_time, samples, mcmc_src,
+                             n_pool)

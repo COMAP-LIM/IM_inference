@@ -63,7 +63,8 @@ def insert_data(data, observables):
             observable.data = data.item()[observable.label]
 
 
-def get_data(mcmc_params, exp_params, model, observables, map_obj):
+def get_data(mcmc_params, exp_params, model,
+             observables, map_obj, runid):
     maps = np.zeros((
         mcmc_params.n_patches,
         map_obj.n_x,
@@ -86,6 +87,9 @@ def get_data(mcmc_params, exp_params, model, observables, map_obj):
     if mcmc_params.save_file:
         print('saving map to file')
         np.save(mcmc_params.map_filename, maps)
+        map_fp = os.path.join(mcmc_params.output_dir, 'blob',
+                              'map_run{0:d}.npy'.format(runid))
+        np.save(map_fp, maps)
 
     data = dict()
     for i in range(mcmc_params.n_patches):
@@ -104,7 +108,9 @@ def get_data(mcmc_params, exp_params, model, observables, map_obj):
 
             if 0 in observable.values:
                 print('some of data values are equal to 0')
-
+    data_fp = os.path.join(mcmc_params.output_dir, 'blob',
+                           'data_run{0:d}.npy'.format(runid))
+    np.save(data_fp, data)
     insert_data(data, observables)
     return data
 
@@ -234,7 +240,7 @@ def ensure_dir_exists(path):
             raise
 
 
-def set_up_log(output_dir, mcmc_params, n_pool):
+def set_up_log(output_dir, mcmc_params, mcmc_src, exp_src, n_pool):
     ensure_dir_exists(output_dir + '/params')
     ensure_dir_exists(output_dir + '/chains')
     ensure_dir_exists(output_dir + '/log_files')
@@ -246,6 +252,14 @@ def set_up_log(output_dir, mcmc_params, n_pool):
             'mcmc_params_run{0:d}.py'.format(runid))):
         runid += 1
     print('Current run_id: %i' % runid)
+    mcmc_params_fp = os.path.join(output_dir, 'params',
+                                  'mcmc_params_run{0:d}.py'.format(runid))
+    exp_params_fp = os.path.join(output_dir, 'params',
+                                 'experiment_params_run{0:d}.py'.format(runid))
+    with open(mcmc_params_fp, 'w') as mcmc_file:
+        mcmc_file.write(mcmc_src)
+    with open(exp_params_fp, 'w') as exp_file:
+        exp_file.write(exp_src)
 
     if os.path.isfile(mcmc_params.run_log_file):
         with open(mcmc_params.run_log_file, 'r') as run_file:
@@ -261,17 +275,6 @@ def set_up_log(output_dir, mcmc_params, n_pool):
     with open(mcmc_params.run_log_file, 'a') as run_file:
         run_file.write(save)
         run_file.close()
-    
-    mcmc_params_fp = os.path.join(output_dir, 'params',
-                                  'mcmc_params_run{0:d}.py'.format(runid))
-    exp_params_fp = os.path.join(output_dir, 'params',
-                                 'experiment_params_run{0:d}.py'.format(runid))
-    if len(sys.argv) < 2:
-        shutil.copy2('mcmc_params.py', mcmc_params_fp)
-        shutil.copy2('experiment_params.py', exp_params_fp)
-    else:
-        shutil.copy2(sys.argv[1], mcmc_params_fp)
-        shutil.copy2(sys.argv[2], exp_params_fp)
 
     mcmc_chains_fp = os.path.join(output_dir, 'chains',
                                   'mcmc_chains_run{0:d}.dat'.format(runid))
@@ -303,13 +306,9 @@ def write_state_to_file(
     sys.stdout.flush()
 
 
-def write_log_file(mcmc_log_fp, samples_log_fp, start_time, samples, n_pool):
-    if len(sys.argv) < 2:
-        mcmc_file = 'mcmc_params.py'
-    else:
-        mcmc_file = sys.argv[1] 
-    with open(mcmc_log_fp, 'w') as log_file, \
-            open(mcmc_file, 'r') as param_file:
+def write_log_file(mcmc_log_fp, samples_log_fp, start_time,
+                   samples, mcmc_src, n_pool):
+    with open(mcmc_log_fp, 'w') as log_file:
         log_file.write('Time start of run     : %s \n' % (start_time))
         log_file.write('Time end of run       : %s \n' %
                        (datetime.datetime.now()))
@@ -334,7 +333,7 @@ def write_log_file(mcmc_log_fp, samples_log_fp, start_time, samples, n_pool):
         log_file.write('Run on %s with %i processes' % (
             socket.gethostname(), n_pool
         ))
-        log_file.write('\nmcmc_params.py: \n' + param_file.read())
+        log_file.write('\nmcmc_params.py: \n' + mcmc_src)
 
         print('Execution time:', datetime.datetime.now() - start_time)
 
