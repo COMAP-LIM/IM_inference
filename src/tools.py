@@ -21,6 +21,7 @@ def set_up_mcmc(mcmc_params, exp_params):
     """
 
     observables = []
+    extra_observables = []
     map_obj = src.MapObj.MapObj(exp_params)
 
     # Add more if-statements as other observables are implemented.
@@ -32,6 +33,10 @@ def set_up_mcmc(mcmc_params, exp_params):
     if 'vid' in mcmc_params.observables:
         vid = src.Observable.Voxel_Intensity_Distribution(mcmc_params)
         observables.append(vid)
+    
+    if 'lum' in mcmc_params.extra_observables:
+        lum = src.Observable.Luminosity_Function()
+        extra_observables.append(lum)
 
     if (mcmc_params.model == 'wn_ps'):
         model = src.Model.WhiteNoisePowerSpectrum(exp_params)
@@ -47,7 +52,7 @@ def set_up_mcmc(mcmc_params, exp_params):
 
     model.set_up()
 
-    return model, observables, map_obj
+    return model, observables, extra_observables, map_obj
 
 
 def insert_data(data, observables):
@@ -78,12 +83,13 @@ def get_data(mcmc_params, exp_params, model,
         model_params = mcmc_params.model_params_true[model.label]
         for i in range(mcmc_params.n_patches):
             if exp_params.map_smoothing:
-                maps[i] = create_smoothed_map(
+                maps[i], _ = create_smoothed_map(
                     model, model_params
-                ) + map_obj.generate_noise_map()
+                )
             else:
-                maps[i] = model.generate_map(
-                    model_params) + map_obj.generate_noise_map()
+                maps[i], _ = model.generate_map(
+                    model_params)
+            maps[i] += map_obj.generate_noise_map()
             maps[i] -= np.mean(maps[i].flatten())
     if mcmc_params.save_file:
         print('saving map to file')
@@ -201,7 +207,7 @@ def create_smoothed_map(model, model_params):
         model.map_obj.pix_binedges_y[0], model.map_obj.pix_binedges_y[-1],
         factor * (len(model.map_obj.pix_binedges_y) - 1) + 1)
     # make high-resolution map
-    model.map_obj.map = model.generate_map(model_params)
+    model.map_obj.map, extra = model.generate_map(model_params)
 
     pixwidth = (
         model.map_obj.pix_binedges_x[1] - model.map_obj.pix_binedges_x[0]
@@ -228,7 +234,7 @@ def create_smoothed_map(model, model_params):
     
     # degrade map back to low-res grid
     model.map_obj.map = degrade(model.map_obj.map, factor)
-    return model.map_obj.map
+    return model.map_obj.map, extra
 
 
 # From Tony Li
@@ -298,12 +304,23 @@ def write_state_to_file(
     for obs in mcmc_params.observables:
         with open(blob_fp + obs + '_' + str(runid) + '.dat', 'a') as blob_file:
             for j in range(mcmc_params.n_walkers):
-                for o in blobs[j]:
+                for o in blobs[j][0]:
                     if o.label == obs:
                         obs_data = o.mean
                         break
                 blob_file.write('{0:4d} {1:s}\n'.format(
                     j, ' '.join([str(d) for d in obs_data])))
+                obs_data = None
+    for obs in mcmc_params.extra_observables:
+        with open(blob_fp + obs + '_' + str(runid) + '.dat', 'a') as blob_file:
+            for j in range(mcmc_params.n_walkers):
+                for o in blobs[j][1]:
+                    if o.label == obs:
+                        obs_data = o.mean
+                        break
+                blob_file.write('{0:4d} {1:s}\n'.format(
+                    j, ' '.join([str(d) for d in obs_data])))
+                obs_data = None
     sys.stdout.flush()
 
 

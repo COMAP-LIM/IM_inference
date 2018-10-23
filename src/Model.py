@@ -156,6 +156,9 @@ class Mhalo_to_Lco(Model):
 
         return Tco
 
+    def calculate_Lco(self, halos, model_params):
+        pass
+
     def generate_map(self, model_params):  # Lco_to_map
         # generate map
         # Calculate line freq from redshift
@@ -164,8 +167,11 @@ class Mhalo_to_Lco(Model):
         # print(halos.M)
         halos.nu = map_obj.nu_rest / (halos.redshift + 1)
         halos.Lco = self.calculate_Lco(halos, model_params)
-        # print('halos', halos.Lco)
-        # sys.exit()
+
+        lum_func = np.histogram(
+            halos.Lco[np.where(np.isfinite(halos.Lco))], bins=self.exp_params.lumfunc_bins
+        )[0] / self.exp_params.delta_lum / map_obj.volume / map_obj.cosmo.h**3
+
         # Transform from Luminosity to Temperature
         halos.Tco = self.T_line(halos)
 
@@ -174,12 +180,12 @@ class Mhalo_to_Lco(Model):
                   map_obj.pix_binedges_y, map_obj.nu_binedges[::-1]]
 
         # bin in RA, DEC, NU_obs
-        maps, edges = np.histogramdd(np.c_[halos.ra, halos.dec, halos.nu],
-                                     bins=bins3D,
-                                     weights=halos.Tco)
+        maps, _ = np.histogramdd(np.c_[halos.ra, halos.dec, halos.nu],
+                                 bins=bins3D,
+                                 weights=halos.Tco)
 
         # flip back frequency bins
-        return maps[:, :, ::-1]
+        return maps[:, :, ::-1], lum_func
 
 
 class Mhalo_to_Lco_Pullen(Mhalo_to_Lco):

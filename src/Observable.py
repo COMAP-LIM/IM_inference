@@ -63,3 +63,12 @@ class Voxel_Intensity_Distribution(Observable):
         self.mean[np.where(self.mean == 0)] = 1e-2
         self.sum = None
         self.independent_variance()
+
+
+class Luminosity_Function(Observable):
+    def __init__(self):
+        self.sum = None
+        self.label = 'lum'
+
+    def calculate_observable(self, map_obj):
+        self.values = map_obj.extra

@@ -7,6 +7,10 @@ FWHM = 4  # arcmin Haavard, Pullen
 resolution_factor = 4  # how much finer resolution to use for pixels in high-res map before smoothing
 # FWHM = 6  # arcmin Li
 
+lumfunc_bins = np.logspace(3.5, 7.5, 51)
+luminosity = 0.5 * (lumfunc_bins[:-1] + lumfunc_bins[1:])
+delta_lum = np.diff(lumfunc_bins)
+
 n_pix_x = 22  # no of pixels
 n_pix_y = 22
 

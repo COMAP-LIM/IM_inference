@@ -13,6 +13,7 @@ likelihood = 'chi_squared'
 # observables = ('ps',)
 observables = ('ps', 'vid')
 # observables =('vid',)
+extra_observables = ('lum',)
 # model = 'wn_ps'
 # model = 'pl_ps'
 # model = 'Lco_Pullen'
@@ -55,7 +56,7 @@ prior_params['Lco_Li'] = [
 prior_params['simp_Li'] = [
     [1.17, 0.37],	 # alpha - log10 slope
     [0.21, 3.74],	 # beta - log10 intercept
-    [0.5, 0.2],	     # sigma_tot
+    [0.5, 0.3],	     # sigma_tot
 ]
 
 

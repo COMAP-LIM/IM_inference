@@ -40,7 +40,7 @@ mcmc_src = inspect.getsource(mcmc_params)
 exp_src = inspect.getsource(exp_params)
 
 
-def lnprob(model_params, model, observables, map_obj):
+def lnprob(model_params, model, observables, extra_observables, map_obj):
     """
     Simulates the experiment for given model parameters to estimate the
     mean of the observables and uses this mean to estimate the
@@ -55,19 +55,25 @@ def lnprob(model_params, model, observables, map_obj):
 
     for i in range(mcmc_params.n_realizations):
         if exp_params.map_smoothing:
-            map_obj.map = src.tools.create_smoothed_map(
+            map_obj.map, map_obj.extra = src.tools.create_smoothed_map(
                 model, model_params
-            ) + map_obj.generate_noise_map()
+            )
+            map_obj.map += map_obj.generate_noise_map()
         else:
-            map_obj.map = model.generate_map(
-                model_params) + map_obj.generate_noise_map()
+            map_obj.map, map_obj.extra = model.generate_map(
+                model_params)
+            map_obj.map += map_obj.generate_noise_map()
         map_obj.map -= np.mean(map_obj.map.flatten())
         map_obj.calculate_observables(observables)
+        map_obj.calculate_observables(extra_observables)
         for observable in observables:
+            observable.add_observable_to_sum()
+        for observable in extra_observables:
             observable.add_observable_to_sum()
     for observable in observables:
         observable.calculate_mean(mcmc_params.n_realizations)
-
+    for observable in extra_observables:
+        observable.calculate_mean(mcmc_params.n_realizations)
     # calculate the actual likelihoods
     ln_likelihood = 0.0
     n_samp = mcmc_params.n_realizations / mcmc_params.n_patches
@@ -107,7 +113,7 @@ def lnprob(model_params, model, observables, map_obj):
     if not np.isfinite(ln_likelihood + ln_prior):
         return -np.infty, observables
 
-    return ln_prior + ln_likelihood, observables
+    return ln_prior + ln_likelihood, (observables, extra_observables)
 
 
 if __name__ == "__main__":
@@ -126,7 +132,7 @@ if __name__ == "__main__":
                              mcmc_params, mcmc_src,
                              exp_src, n_pool)
 
-    model, observables, map_obj = src.tools.set_up_mcmc(
+    model, observables, extra_observables, map_obj = src.tools.set_up_mcmc(
         mcmc_params, exp_params)
 
     src.tools.get_data(mcmc_params, exp_params, model,
@@ -135,11 +141,13 @@ if __name__ == "__main__":
     if mcmc_params.pool:
         sampler = emcee.EnsembleSampler(
             mcmc_params.n_walkers, model.n_params, lnprob,
-            args=(model, observables, map_obj), pool=pool)
+            args=(model, observables, extra_observables, map_obj),
+            pool=pool)
     else:
         sampler = emcee.EnsembleSampler(
             mcmc_params.n_walkers, model.n_params, lnprob,
-            args=(model, observables, map_obj), threads=mcmc_params.n_threads)
+            args=(model, observables, extra_observables, map_obj),
+            threads=mcmc_params.n_threads)
 
     pos = model.mcmc_walker_initial_positions(
         mcmc_params.prior_params[model.label], mcmc_params.n_walkers)

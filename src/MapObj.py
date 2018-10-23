@@ -10,7 +10,7 @@ class MapObj:
     """
     def __init__(self, exp_params):
         self.exp_params = exp_params
-        cosmo = FlatLambdaCDM(H0=70, Om0=0.286, Ob0=0.047)  # FlatLambdaCDM(H0=cosmos.h*100*u.km/u.s/u.Mpc,
+        self.cosmo = FlatLambdaCDM(H0=70, Om0=0.286, Ob0=0.047)  # FlatLambdaCDM(H0=cosmos.h*100*u.km/u.s/u.Mpc,
                             #   Om0=cosmos.Omega_M, Ob0=cosmos.Omega_B)
         #cosmo1=getattr(astropy.cosmology, exp_params.cosmology)
         #cosmo = cosmo1.clone(name= exp_params.cosmology+' mod', H0=cosmos.h*100*u.km/u.s/u.Mpc, Om0=cosmos.Omega_M, Ob0=cosmos.Omega_B)
@@ -60,10 +60,10 @@ class MapObj:
 
         # comoving distances
         self.x = (self.pix_binedges_x*np.pi/180.
-                  * np.mean(cosmo.comoving_transverse_distance(self.z_array)))
+                  * np.mean(self.cosmo.comoving_transverse_distance(self.z_array).value))
         self.y = (self.pix_binedges_y*np.pi/180.
-                  * np.mean(cosmo.comoving_transverse_distance(self.z_array)))
-        self.z = cosmo.comoving_distance(self.z_array)
+                  * np.mean(self.cosmo.comoving_transverse_distance(self.z_array).value))
+        self.z = self.cosmo.comoving_distance(self.z_array).value
 
         self.n_x = len(self.x) - 1
         self.n_y = len(self.y) - 1
