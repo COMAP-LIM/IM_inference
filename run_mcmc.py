@@ -55,12 +55,12 @@ def lnprob(model_params, model, observables, extra_observables, map_obj):
 
     for i in range(mcmc_params.n_realizations):
         if exp_params.map_smoothing:
-            map_obj.map, map_obj.extra = src.tools.create_smoothed_map(
+            map_obj.map, map_obj.lum_func = src.tools.create_smoothed_map(
                 model, model_params
             )
             map_obj.map += map_obj.generate_noise_map()
         else:
-            map_obj.map, map_obj.extra = model.generate_map(
+            map_obj.map, map_obj.lum_func = model.generate_map(
                 model_params)
             map_obj.map += map_obj.generate_noise_map()
         map_obj.map -= np.mean(map_obj.map.flatten())

@@ -14,19 +14,13 @@ likelihood = 'chi_squared'
 observables = ('ps', 'vid')
 # observables =('vid',)
 extra_observables = ('lum',)
-# model = 'wn_ps'
-# model = 'pl_ps'
-# model = 'Lco_Pullen'
-# model = 'Lco_Li'
-model = 'simp_Li'
+# mcmc_model = 'wn_ps'
+# mcmc_model = 'pl_ps'
+# mcmc_model = 'Lco_Pullen'
+# mcmc_model = 'Lco_Li'
+mcmc_model = 'simp_Li'
 
 prior_params = dict()
-
-# ps_kbins = np.logspace(1, 2, 10)
-# vid_Tbins = np.logspace(2,3, 11)
-ps_kbins = np.logspace(-1.5, 0.0, 21)  # (-1.5, -0.5, 10)#10)
-vid_Tbins = np.logspace(1, 2, 26)
-# vid_Tbins = np.logspace(5.7, 8, 10)  # Lco, 10x10x10
 
 # Gaussian prior for white noise power spectrum
 prior_params['wn_ps'] = [
@@ -58,14 +52,6 @@ prior_params['simp_Li'] = [
     [0.21, 3.74],	 # beta - log10 intercept
     [0.5, 0.3],	     # sigma_tot
 ]
-
-
-model_params_true = dict()
-model_params_true['wn_ps'] = [8.3]  # sigma_T for wn_ps
-model_params_true['pl_ps'] = [8., 1.]  # A and alpha for pw_ps
-model_params_true['Lco_Pullen'] = [-7.3]  # np.log10(1e6/5e11)]
-model_params_true['Lco_Li'] = [0.0, 1.17, 0.21, 0.3, 0.3]  # [0.0, 1.37, -1.74, 0.3, 0.3]
-model_params_true['simp_Li'] = [1.17, 0.21, 0.5]  # alpha, beta, sigma_tot
 
 map_filename = 'trial4.npy'
 samples_filename = 'samples_lco_test4.npy'

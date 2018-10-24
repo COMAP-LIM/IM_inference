@@ -28,26 +28,26 @@ def set_up_mcmc(mcmc_params, exp_params):
     # At some point we should add some checks to make sure that a
     # valid model, and a set of observables are actually picked.
     if 'ps' in mcmc_params.observables:
-        ps = src.Observable.Power_Spectrum(mcmc_params)
+        ps = src.Observable.Power_Spectrum(exp_params)
         observables.append(ps)
     if 'vid' in mcmc_params.observables:
-        vid = src.Observable.Voxel_Intensity_Distribution(mcmc_params)
+        vid = src.Observable.Voxel_Intensity_Distribution(exp_params)
         observables.append(vid)
     
     if 'lum' in mcmc_params.extra_observables:
         lum = src.Observable.Luminosity_Function()
         extra_observables.append(lum)
 
-    if (mcmc_params.model == 'wn_ps'):
+    if (mcmc_params.mcmc_model == 'wn_ps'):
         model = src.Model.WhiteNoisePowerSpectrum(exp_params)
-    if (mcmc_params.model == 'pl_ps'):
+    if (mcmc_params.mcmc_model == 'pl_ps'):
         model = src.Model.PowerLawPowerSpectrum(exp_params, map_obj)
 
-    if (mcmc_params.model == 'Lco_Pullen'):
+    if (mcmc_params.mcmc_model == 'Lco_Pullen'):
         model = src.Model.Mhalo_to_Lco_Pullen(exp_params, map_obj)
-    if (mcmc_params.model == 'Lco_Li'):
+    if (mcmc_params.mcmc_model == 'Lco_Li'):
         model = src.Model.Mhalo_to_Lco_Li(exp_params, map_obj)
-    if (mcmc_params.model == 'simp_Li'):
+    if (mcmc_params.mcmc_model == 'simp_Li'):
         model = src.Model.Simplified_Li(exp_params, map_obj)
 
     model.set_up()
@@ -80,7 +80,7 @@ def get_data(mcmc_params, exp_params, model,
         print('opening map data file')
         maps = np.load(mcmc_params.map_filename)
     else:
-        model_params = mcmc_params.model_params_true[model.label]
+        model_params = exp_params.model_params_true[model.label]
         for i in range(mcmc_params.n_patches):
             if exp_params.map_smoothing:
                 maps[i], _ = create_smoothed_map(
