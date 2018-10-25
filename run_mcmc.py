@@ -58,11 +58,10 @@ def lnprob(model_params, model, observables, extra_observables, map_obj):
             map_obj.map, map_obj.lum_func = src.tools.create_smoothed_map(
                 model, model_params
             )
-            map_obj.map += map_obj.generate_noise_map()
         else:
             map_obj.map, map_obj.lum_func = model.generate_map(
                 model_params)
-            map_obj.map += map_obj.generate_noise_map()
+        map_obj.map += map_obj.generate_noise_map()
         map_obj.map -= np.mean(map_obj.map.flatten())
         map_obj.calculate_observables(observables)
         map_obj.calculate_observables(extra_observables)
@@ -86,7 +85,8 @@ def lnprob(model_params, model, observables, extra_observables, map_obj):
                     (1 + n_samp) / n_samp * (
                         observable.independent_var
                         / mcmc_params.n_patches
-                    )
+                    )                                                                                                                                   \
+                            
                 )
     elif (mcmc_params.likelihood == 'chi_squared_cov'):
         n_data = len(mcmc_params.cov_mat_0[:, 0])
@@ -117,7 +117,7 @@ def lnprob(model_params, model, observables, extra_observables, map_obj):
 
 
 if __name__ == "__main__":
-    src.tools.make_picklable(exp_params, mcmc_params)
+    src.tools.make_picklable((exp_params, mcmc_params))
     if mcmc_params.pool:
         pool = MPIPool(loadbalance=True)
         n_pool = pool.size + 1

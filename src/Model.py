@@ -159,11 +159,13 @@ class Mhalo_to_Lco(Model):
     def calculate_Lco(self, halos, model_params):
         pass
 
-    def generate_map(self, model_params):  # Lco_to_map
+    def generate_map(self, model_params, halos=None):  # Lco_to_map
         # generate map
         # Calculate line freq from redshift
         map_obj = self.map_obj
-        halos = self.all_halos[np.random.randint(0, len(self.all_halos))]
+        if halos is None:
+            halos = self.all_halos[np.random.randint(0, len(self.all_halos))]
+
         # print(halos.M)
         halos.nu = map_obj.nu_rest / (halos.redshift + 1)
         halos.Lco = self.calculate_Lco(halos, model_params)

@@ -55,6 +55,72 @@ def set_up_mcmc(mcmc_params, exp_params):
     return model, observables, extra_observables, map_obj
 
 
+def set_up_cov(exp_params):
+    """
+    Sets up the different objects for calculating the covariance matrix.
+    """
+
+    observables = []
+    extra_observables = []
+    small_map = src.MapObj.MapObj(exp_params)
+    full_map = src.MapObj.MapObj(exp_params)
+
+    fov_max = exp_params.cov_full_fov
+
+    n_maps_x = int(np.floor(fov_max / small_map.fov_x))
+    n_maps_y = int(np.floor(fov_max / small_map.fov_y))
+    
+    full_map.fov_x = small_map.fov_x * n_maps_x
+    full_map.fov_y = small_map.fov_y * n_maps_y
+    full_map.n_pix_x = n_maps_x * small_map.n_pix_x
+    full_map.n_pix_y = n_maps_y * small_map.n_pix_y
+    full_map.n_x = full_map.n_pix_x
+    full_map.n_y = full_map.n_pix_y
+
+    full_map.pix_binedges_x = np.linspace(
+        - full_map.fov_x / 2,
+        full_map.fov_x / 2,
+        full_map.n_pix_x + 1
+    )
+    full_map.pix_binedges_y = np.linspace(
+        - full_map.fov_y / 2,
+        full_map.fov_y / 2,
+        full_map.n_pix_y + 1
+    )
+    full_map.volume = n_maps_x * n_maps_y * small_map.volume
+    full_map.n_maps_x = n_maps_x
+    full_map.n_maps_y = n_maps_y
+    # Add more if-statements as other observables are implemented.
+    # At some point we should add some checks to make sure that a
+    # valid model, and a set of observables are actually picked.
+    if 'ps' in exp_params.cov_observables:
+        ps = src.Observable.Power_Spectrum(exp_params)
+        observables.append(ps)
+    if 'vid' in exp_params.cov_observables:
+        vid = src.Observable.Voxel_Intensity_Distribution(exp_params)
+        observables.append(vid)
+
+    if 'lum' in exp_params.cov_extra_observables:
+        lum = src.Observable.Luminosity_Function()
+        extra_observables.append(lum)
+
+    if (exp_params.cov_model == 'wn_ps'):
+        model = src.Model.WhiteNoisePowerSpectrum(exp_params)
+    if (exp_params.cov_model == 'pl_ps'):
+        model = src.Model.PowerLawPowerSpectrum(exp_params, full_map)
+
+    if (exp_params.cov_model == 'Lco_Pullen'):
+        model = src.Model.Mhalo_to_Lco_Pullen(exp_params, full_map)
+    if (exp_params.cov_model == 'Lco_Li'):
+        model = src.Model.Mhalo_to_Lco_Li(exp_params, full_map)
+    if (exp_params.cov_model == 'simp_Li'):
+        model = src.Model.Simplified_Li(exp_params, full_map)
+
+    # model.set_up()
+
+    return model, observables, extra_observables, small_map, full_map
+
+
 def insert_data(data, observables):
     # Inserts data downloaded from file into the corresponding observable
     # objects.
@@ -161,6 +227,21 @@ def calculate_vid(map_obj, T_bin):
     return B_val, T_array
 
 
+def distribute_indices(n_indices, n_processes, my_rank):
+    divide = n_indices // n_processes
+    leftovers = n_indices % n_processes
+
+    if my_rank < leftovers:
+        my_n_cubes = divide + 1
+        my_offset = my_rank
+    else:
+        my_n_cubes = divide
+        my_offset = leftovers
+    start_index = my_rank * divide + my_offset
+    my_indices = range(start_index, start_index + my_n_cubes)
+    return my_indices
+
+
 def degrade(largemap, factor, axes=[0, 1]):
     dims = np.array(largemap.shape)[axes]
     rows, cols = dims // factor
@@ -192,7 +273,7 @@ def gaussian_smooth(mymap, sigma_x, sigma_y, n_sigma=5.0):
     return smoothed_map
 
 
-def create_smoothed_map(model, model_params):
+def create_smoothed_map(model, model_params, halos=None):
     exp_params = model.exp_params
     factor = exp_params.resolution_factor
 
@@ -207,7 +288,10 @@ def create_smoothed_map(model, model_params):
         model.map_obj.pix_binedges_y[0], model.map_obj.pix_binedges_y[-1],
         factor * (len(model.map_obj.pix_binedges_y) - 1) + 1)
     # make high-resolution map
-    model.map_obj.map, extra = model.generate_map(model_params)
+    if halos is None:
+        model.map_obj.map, extra = model.generate_map(model_params)
+    else:
+        model.map_obj.map, extra = model.generate_map(model_params, halos)
 
     pixwidth = (
         model.map_obj.pix_binedges_x[1] - model.map_obj.pix_binedges_x[0]
@@ -453,7 +537,12 @@ def rebuild_mod(name):
     return sys.modules[name]
 
 
-def make_picklable(exp_params, mcmc_params):
+def make_picklable(modules):
     # make parameter files pickable
-    copyreg.pickle(type(exp_params), reduce_mod)
-    copyreg.pickle(type(mcmc_params), reduce_mod)
+    for module in modules:
+        copyreg.pickle(type(module), reduce_mod)
+
+# def make_picklable(exp_params, mcmc_params):
+#     # make parameter files pickable
+#     copyreg.pickle(type(exp_params), reduce_mod)
+#     copyreg.pickle(type(mcmc_params), reduce_mod)

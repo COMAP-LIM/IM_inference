@@ -39,6 +39,10 @@ nu_i = 34.    # GHz
 nu_f = 26.
 
 # model uset to make covariance matrices
+# observables = ('ps',)
+cov_observables = ('ps', 'vid')
+# observables =('vid',)
+cov_extra_observables = ('lum',)
 # cov_model = 'wn_ps'
 # cov_model = 'pl_ps'
 # cov_model = 'Lco_Pullen'
@@ -51,3 +55,8 @@ model_params_true['pl_ps'] = [8., 1.]  # A and alpha for pw_ps
 model_params_true['Lco_Pullen'] = [-7.3]  # np.log10(1e6/5e11)]
 model_params_true['Lco_Li'] = [0.0, 1.17, 0.21, 0.3, 0.3]  # [0.0, 1.37, -1.74, 0.3, 0.3]
 model_params_true['simp_Li'] = [1.17, 0.21, 0.5]  # alpha, beta, sigma_tot
+
+cov_full_fov = 1.5  # degrees
+
+cov_catalogue_folder = 'catalogues/'
+cov_output_dir = 'cov_output/'
