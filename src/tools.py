@@ -411,7 +411,8 @@ def write_state_to_file(
 def write_log_file(mcmc_log_fp, samples_log_fp, start_time,
                    samples, mcmc_src, n_pool):
     with open(mcmc_log_fp, 'w') as log_file:
-        log_file.write('Time start of run     : %s \n' % (start_time))
+        log_file.write('Time start of run     : %s \n' %
+                       (start_time))
         log_file.write('Time end of run       : %s \n' %
                        (datetime.datetime.now()))
         tot_time = (datetime.datetime.now() - start_time)

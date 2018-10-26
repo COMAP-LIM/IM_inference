@@ -8,7 +8,10 @@ n_patches = 2
 # step in the MCMC
 n_realizations = 10
 
-likelihood = 'chi_squared'
+# likelihood = 'chi_squared'
+likelihood = 'chi_squared_cov'
+cov_output_folder = 'cov_output'
+cov_id = '2'
 
 # observables = ('ps',)
 observables = ('ps', 'vid')

@@ -13,6 +13,7 @@ to a set of observables) and constrain the model
 parameters of some IM-model.
 """
 import numpy as np
+import h5py
 import src.MapObj
 import src.tools
 import src.Model
@@ -32,11 +33,28 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 if len(sys.argv) < 2:
     import mcmc_params
-    import experiment_params as exp_params
 else:
     mcmc_params = importlib.import_module(sys.argv[1][:-3])
-    exp_params = importlib.import_module(sys.argv[2][:-3])
 mcmc_src = inspect.getsource(mcmc_params)
+
+# Make this into a funciton maybe
+if mcmc_params.likelihood == 'chi_squared':
+    if len(sys.argv) < 3:
+        import experiment_params as exp_params
+    else:
+        exp_params = importlib.import_module(sys.argv[2][:-3])
+else:
+    cov_folder = mcmc_params.cov_output_folder
+    cov_id = int(mcmc_params.cov_id)
+    exp_params_fp = (
+        cov_folder + '.param'
+        + '.experiment_params_id{0:d}'.format(cov_id)
+    )
+    data_fp = os.path.join(
+        cov_folder, 'data',
+        'data_id{0:d}.h5'.format(cov_id))
+    exp_params = importlib.import_module(exp_params_fp)
+    cov_data = h5py.File(data_fp, 'r')
 exp_src = inspect.getsource(exp_params)
 
 
@@ -85,11 +103,10 @@ def lnprob(model_params, model, observables, extra_observables, map_obj):
                     (1 + n_samp) / n_samp * (
                         observable.independent_var
                         / mcmc_params.n_patches
-                    )                                                                                                                                   \
-                            
+                    )
                 )
     elif (mcmc_params.likelihood == 'chi_squared_cov'):
-        n_data = len(mcmc_params.cov_mat_0[:, 0])
+        n_data = len(cov_data['var_indep_0'])
         i = 0
         data = np.zeros(n_data)
         mean = np.zeros(n_data)
@@ -102,18 +119,19 @@ def lnprob(model_params, model, observables, extra_observables, map_obj):
             i += n_data_obs
         var_ratio = np.sqrt(
             np.outer(ind_var, ind_var)
-            / np.outer(mcmc_params.ind_var_0, mcmc_params.ind_var_0)
+            / np.outer(cov_data['var_indep_0'], cov_data['var_indep_0'])
         )
         cov_mat = (1 + n_samp) / n_samp * (
-            mcmc_params.cov_mat_0 * var_ratio / mcmc_params.n_patches
+            cov_data['cov_mat'] * var_ratio / mcmc_params.n_patches
         )
+        # print(cov_mat)
         ln_likelihood += src.likelihoods.ln_chi_squared_cov(
             data, mean, cov_mat)
+    ln_post = ln_prior + ln_likelihood
+    if not np.isfinite(ln_post):
+        ln_post = -np.infty
 
-    if not np.isfinite(ln_likelihood + ln_prior):
-        return -np.infty, observables
-
-    return ln_prior + ln_likelihood, (observables, extra_observables)
+    return ln_post, (observables, extra_observables)
 
 
 if __name__ == "__main__":

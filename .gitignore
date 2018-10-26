@@ -22,3 +22,6 @@ new_mcmc.py
 check_thermalization.py
 *~
 some_catalogues/
+new_params.py
+cov_output/
+check_chi2.py

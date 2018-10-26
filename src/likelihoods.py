@@ -17,7 +17,7 @@ def ln_chi_squared_cov(data, mean, cov_mat):
         return -np.infty
     loglike = - 0.5 * (
         np.matmul((data - mean), np.matmul(inv_cov_mat, (data - mean)))
-        + np.log(local_cov_det)
+        + np.log(cov_det)
     )
     if np.isfinite(loglike):
         return loglike

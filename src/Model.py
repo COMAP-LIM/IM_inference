@@ -171,7 +171,8 @@ class Mhalo_to_Lco(Model):
         halos.Lco = self.calculate_Lco(halos, model_params)
 
         lum_func = np.histogram(
-            halos.Lco[np.where(np.isfinite(halos.Lco))], bins=self.exp_params.lumfunc_bins
+            halos.Lco[np.where(np.isfinite(halos.Lco))],
+            bins=self.exp_params.lumfunc_bins
         )[0] / self.exp_params.delta_lum / map_obj.volume / map_obj.cosmo.h**3
 
         # Transform from Luminosity to Temperature
