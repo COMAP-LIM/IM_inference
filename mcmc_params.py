@@ -56,6 +56,13 @@ prior_params['simp_Li'] = [
     [0.5, 0.3],	     # sigma_tot
 ]
 
+model_params_true = dict()
+model_params_true['wn_ps'] = [8.3]  # sigma_T for wn_ps
+model_params_true['pl_ps'] = [8., 1.]  # A and alpha for pw_ps
+model_params_true['Lco_Pullen'] = [-7.3]  # np.log10(1e6/5e11)]
+model_params_true['Lco_Li'] = [0.0, 1.17, 0.21, 0.3, 0.3]  # [0.0, 1.37, -1.74, 0.3, 0.3]
+model_params_true['simp_Li'] = [1.17, 0.21, 0.5]  # alpha, beta, sigma_tot
+
 map_filename = 'trial4.npy'
 samples_filename = 'samples_lco_test4.npy'
 run_log_file = 'run_log.txt'

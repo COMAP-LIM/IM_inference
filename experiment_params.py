@@ -49,12 +49,12 @@ cov_extra_observables = ('lum',)
 # cov_model = 'Lco_Li'
 cov_model = 'simp_Li'
 
-model_params_true = dict()
-model_params_true['wn_ps'] = [8.3]  # sigma_T for wn_ps
-model_params_true['pl_ps'] = [8., 1.]  # A and alpha for pw_ps
-model_params_true['Lco_Pullen'] = [-7.3]  # np.log10(1e6/5e11)]
-model_params_true['Lco_Li'] = [0.0, 1.17, 0.21, 0.3, 0.3]  # [0.0, 1.37, -1.74, 0.3, 0.3]
-model_params_true['simp_Li'] = [1.17, 0.21, 0.5]  # alpha, beta, sigma_tot
+model_params_cov = dict()
+model_params_cov['wn_ps'] = [8.3]  # sigma_T for wn_ps
+model_params_cov['pl_ps'] = [8., 1.]  # A and alpha for pw_ps
+model_params_cov['Lco_Pullen'] = [-7.3]  # np.log10(1e6/5e11)]
+model_params_cov['Lco_Li'] = [0.0, 1.17, 0.21, 0.3, 0.3]  # [0.0, 1.37, -1.74, 0.3, 0.3]
+model_params_cov['simp_Li'] = [1.17, 0.21, 0.5]  # alpha, beta, sigma_tot
 
 cov_full_fov = 1.5  # degrees
 

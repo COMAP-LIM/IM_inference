@@ -146,7 +146,7 @@ def get_data(mcmc_params, exp_params, model,
         print('opening map data file')
         maps = np.load(mcmc_params.map_filename)
     else:
-        model_params = exp_params.model_params_true[model.label]
+        model_params = mcmc_params.model_params_true[model.label]
         for i in range(mcmc_params.n_patches):
             if exp_params.map_smoothing:
                 maps[i], _ = create_smoothed_map(

@@ -54,7 +54,7 @@ model, observables, extra_observables, small_map, full_map = \
 def get_data(exp_params, model, observables,
              extra_observables, small_map,
              full_map, halos):
-    model_params = exp_params.model_params_true[exp_params.cov_model]
+    model_params = exp_params.model_params_cov[exp_params.cov_model]
 
     if exp_params.map_smoothing:
         full_map.map, full_map.lum_func = src.tools.create_smoothed_map(
