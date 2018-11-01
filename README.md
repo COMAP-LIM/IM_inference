@@ -1,7 +1,7 @@
 Code to do inference from line intensity maps
 
 TODO:
-- Implement functions to calculate covariance matrices
+- Test parallelization with openmp for different realizations
 - Implement map_object saved with header (like real observed temperature map)
 - Tests, and automatic tests (pytest?)
 - Automatically run on same input data as previous run
@@ -24,6 +24,7 @@ Done:
 - Implement cosmology (angles, redshift, Mpc etc.) (Check and fix this)
       - Decide on consitent way of defining, dx, dy, dz, v_vox and v_full
 - Include additional model output (e.g. luminosity functions)
-log file
+- log file
       - save experiment params as well
       - save exact command used when running current script in log file (e.g. python run_mcmc.py experiment_params_comap_lignt.py mcmc_params_full_parallell.py) (not easy to do)
+- Implement functions to calculate covariance matrices
