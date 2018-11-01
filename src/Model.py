@@ -127,20 +127,27 @@ class Mhalo_to_Lco(Model):
         
         halo_dir_list = os.listdir(self.exp_params.halo_catalogue_folder)
         self.n_catalogues = len(halo_dir_list)
-        self.n_halo_lists = self.n_catalogues // 40 + 1
-        self.list_size = self.n_catalogues // self.n_halo_lists + 1
-        for i in range(self.n_catalogues):
-            # exec("var_%s=values_%s" % (str(i), str(i)))
-            exec("self.all_halos_%s = []" % str(i))
-        # self.all_halos = []
-        for i in range(self.n_catalogues):
-            j = i // self.list_size
-            halos_fp = os.path.join(self.exp_params.halo_catalogue_folder,
-                                    halo_dir_list[i])
-            halos, _ = src.tools.load_peakpatch_catalogue(halos_fp)
-            exec(("self.all_halos_%s.append("
-                  "src.tools.cull_peakpatch_catalogue("
-                  "halos, self.exp_params.min_mass, self.map_obj))") % j)
+        self.halos_fp = []
+        for filename in halo_dir_list:
+            self.halos_fp.append(
+                os.path.join(self.exp_params.halo_catalogue_folder,
+                             filename)
+            )
+        self.halos_dict = {}
+        # self.n_halo_lists = self.n_catalogues // 40 + 1
+        # self.list_size = self.n_catalogues // self.n_halo_lists + 1
+        # for i in range(self.n_catalogues):
+        #     # exec("var_%s=values_%s" % (str(i), str(i)))
+        #     exec("self.all_halos_%s = []" % str(i))
+        # # self.all_halos = []
+        # for i in range(self.n_catalogues):
+        #     j = i // self.list_size
+        #     halos_fp = os.path.join(self.exp_params.halo_catalogue_folder,
+        #                             halo_dir_list[i])
+        #     halos, _ = src.tools.load_peakpatch_catalogue(halos_fp)
+        #     exec(("self.all_halos_%s.append("
+        #           "src.tools.cull_peakpatch_catalogue("
+        #           "halos, self.exp_params.min_mass, self.map_obj))") % j)
         print("All halos loaded!")
 
     def T_line(self, halos):  # map, halos
@@ -174,11 +181,18 @@ class Mhalo_to_Lco(Model):
         map_obj = self.map_obj
         if halos is None:
             i = np.random.randint(0, self.n_catalogues)
-            j = i // self.list_size
-            k = i % self.list_size
-            #exec("h = %i" % 2)#self.all_halos_%s[%i]" % (str(j), k))
-            halos = eval("self.all_halos_%s[%i]" % (str(j), k))
-
+            if str(i) in self.halos_dict.keys():
+                halos = self.halos_dict[str(i)]
+                print("\nalready here\n")
+            else:
+                halos, _ = src.tools.load_peakpatch_catalogue(
+                    self.halos_fp[i])
+                self.halos_dict['%i' % i] = halos
+                print("\nhad to add\n")
+            # j = i // self.list_size
+            # k = i % self.list_size
+            # #exec("h = %i" % 2)#self.all_halos_%s[%i]" % (str(j), k))
+            # halos = eval("self.all_halos_%s[%i]" % (str(j), k))
 
         halos.nu = map_obj.nu_rest / (halos.redshift + 1)
         halos.Lco = self.calculate_Lco(halos, model_params)
