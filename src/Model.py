@@ -124,14 +124,23 @@ class Mhalo_to_Lco(Model):
         self.map_obj = map_obj
 
     def set_up(self):
-        self.all_halos = []
+        
         halo_dir_list = os.listdir(self.exp_params.halo_catalogue_folder)
-        for i in range(len(halo_dir_list)):
+        self.n_catalogues = len(halo_dir_list)
+        self.n_halo_lists = self.n_catalogues // 40 + 1
+        self.list_size = self.n_catalogues // self.n_halo_lists + 1
+        for i in range(self.n_catalogues):
+            # exec("var_%s=values_%s" % (str(i), str(i)))
+            exec("self.all_halos_%s = []" % str(i))
+        # self.all_halos = []
+        for i in range(self.n_catalogues):
+            j = i // self.list_size
             halos_fp = os.path.join(self.exp_params.halo_catalogue_folder,
                                     halo_dir_list[i])
-            halos, cosmo = src.tools.load_peakpatch_catalogue(halos_fp)
-            self.all_halos.append(src.tools.cull_peakpatch_catalogue(
-                halos, self.exp_params.min_mass, self.map_obj))
+            halos, _ = src.tools.load_peakpatch_catalogue(halos_fp)
+            exec(("self.all_halos_%s.append("
+                  "src.tools.cull_peakpatch_catalogue("
+                  "halos, self.exp_params.min_mass, self.map_obj))") % j)
         print("All halos loaded!")
 
     def T_line(self, halos):  # map, halos
@@ -164,9 +173,13 @@ class Mhalo_to_Lco(Model):
         # Calculate line freq from redshift
         map_obj = self.map_obj
         if halos is None:
-            halos = self.all_halos[np.random.randint(0, len(self.all_halos))]
+            i = np.random.randint(0, self.n_catalogues)
+            j = i // self.list_size
+            k = i % self.list_size
+            #exec("h = %i" % 2)#self.all_halos_%s[%i]" % (str(j), k))
+            halos = eval("self.all_halos_%s[%i]" % (str(j), k))
 
-        # print(halos.M)
+
         halos.nu = map_obj.nu_rest / (halos.redshift + 1)
         halos.Lco = self.calculate_Lco(halos, model_params)
 

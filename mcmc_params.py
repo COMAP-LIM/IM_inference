@@ -56,6 +56,10 @@ prior_params['simp_Li'] = [
     [0.5, 0.3],	     # sigma_tot
 ]
 
+# halo_catalogue_folder = 'catalogues/'
+
+# min_mass = 2.5e10  # 1e12  # 2.5e10
+
 model_params_true = dict()
 model_params_true['wn_ps'] = [8.3]  # sigma_T for wn_ps
 model_params_true['pl_ps'] = [8., 1.]  # A and alpha for pw_ps

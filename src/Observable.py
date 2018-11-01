@@ -52,7 +52,7 @@ class Voxel_Intensity_Distribution(Observable):
         self.exp_params = exp_params
 
     def calculate_observable(self, map_obj):
-        self.values, self.dk = \
+        self.values, self.T = \
             src.tools.calculate_vid(map_obj, self.exp_params.vid_Tbins)
 
     def independent_variance(self):
