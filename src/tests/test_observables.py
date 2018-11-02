@@ -47,3 +47,18 @@ def test_vid():
     chi2 = np.sum((vid - observables[1].mean) ** 2 / observables[1].independent_var)
     assert(scipy.stats.chi2.cdf(chi2, df=df) < 0.999)
     assert(scipy.stats.chi2.cdf(chi2, df=df) > 0.001)
+
+
+def test_sum():
+    n = 10
+    val = {}
+    val['vid'] = np.random.randn(len(exp_params.vid_Tbins) - 1)
+    val['ps'] = np.random.randn(len(exp_params.ps_kbins) - 1)
+    for observable in observables:
+        observable.sum = 0
+        for i in range(n):
+            observable.values = val[observable.label]
+            observable.add_observable_to_sum()
+        observable.calculate_mean(n)
+        print(observable.mean, val[observable.label])
+        assert(np.all((observable.mean - val[observable.label]) < 1e-6))

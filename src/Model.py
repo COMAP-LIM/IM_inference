@@ -183,12 +183,12 @@ class Mhalo_to_Lco(Model):
             i = np.random.randint(0, self.n_catalogues)
             if str(i) in self.halos_dict.keys():
                 halos = self.halos_dict[str(i)]
-                print("\nalready here\n")
+                # print("\nalready here\n")
             else:
                 halos, _ = src.tools.load_peakpatch_catalogue(
                     self.halos_fp[i])
                 self.halos_dict['%i' % i] = halos
-                print("\nhad to add\n")
+                # print("\nhad to add\n")
             # j = i // self.list_size
             # k = i % self.list_size
             # #exec("h = %i" % 2)#self.all_halos_%s[%i]" % (str(j), k))
