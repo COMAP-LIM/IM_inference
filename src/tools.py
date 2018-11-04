@@ -50,7 +50,7 @@ def set_up_mcmc(mcmc_params, exp_params):
     if (mcmc_params.mcmc_model == 'simp_Li'):
         model = src.Model.Simplified_Li(exp_params, map_obj)
 
-    model.set_up()
+    model.set_up(mcmc_params)
 
     return model, observables, extra_observables, map_obj
 

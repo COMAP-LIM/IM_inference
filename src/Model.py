@@ -20,7 +20,7 @@ class Model:
     def generate_map(self):
         pass
 
-    def set_up(self):
+    def set_up(self, mcmc_params):
         pass
 
 
@@ -123,17 +123,18 @@ class Mhalo_to_Lco(Model):
         self.exp_params = exp_params
         self.map_obj = map_obj
 
-    def set_up(self):
+    def set_up(self, mcmc_params):
         
-        halo_dir_list = os.listdir(self.exp_params.halo_catalogue_folder)
+        halo_dir_list = os.listdir(mcmc_params.halo_catalogue_folder)
         self.n_catalogues = len(halo_dir_list)
         self.halos_fp = []
         for filename in halo_dir_list:
             self.halos_fp.append(
-                os.path.join(self.exp_params.halo_catalogue_folder,
+                os.path.join(mcmc_params.halo_catalogue_folder,
                              filename)
             )
         self.halos_dict = {}
+        self.min_mass = mcmc_params.min_mass
         # self.n_halo_lists = self.n_catalogues // 40 + 1
         # self.list_size = self.n_catalogues // self.n_halo_lists + 1
         # for i in range(self.n_catalogues):
@@ -185,8 +186,10 @@ class Mhalo_to_Lco(Model):
                 halos = self.halos_dict[str(i)]
                 # print("\nalready here\n")
             else:
-                halos, _ = src.tools.load_peakpatch_catalogue(
+                halos, _ = src.tools.load_peakpatch_catalogue(  # cull catalogue also?
                     self.halos_fp[i])
+                halos = src.tools.cull_peakpatch_catalogue(
+                    halos, self.min_mass, self.map_obj)
                 self.halos_dict['%i' % i] = halos
                 # print("\nhad to add\n")
             # j = i // self.list_size

@@ -56,9 +56,9 @@ prior_params['simp_Li'] = [
     [0.5, 0.3],	     # sigma_tot
 ]
 
-# halo_catalogue_folder = 'catalogues/'
+halo_catalogue_folder = 'catalogues/'
 
-# min_mass = 2.5e10  # 1e12  # 2.5e10
+min_mass = 2.5e10  # 1e12  # 2.5e10
 
 model_params_true = dict()
 model_params_true['wn_ps'] = [8.3]  # sigma_T for wn_ps
@@ -77,4 +77,4 @@ save_file = True
 
 # Use MPI-pool?
 pool = True
-n_threads = 4
+n_threads = 64
