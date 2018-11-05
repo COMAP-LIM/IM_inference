@@ -1,17 +1,16 @@
 Code to do inference from line intensity maps
 
 TODO:
-- Test parallelization with openmp for different realizations
 - Implement map_object saved with header (like real observed temperature map)
-- Tests, and automatic tests (pytest?)
 - Automatically run on same input data as previous run
 - Automatically run on same experiment and mcmc setup as previous run
 - Continue from state of previous run
 - Lots of ideas for different models to compare
 
-In progress: 
-- Make run_mcmc save results and parameters used together with 
-- Parallellization (fix issue with big halo objects)
+In progress:
+- Tests, and automatic tests (pytest?)
+- Test parallelization with multiple hosts etc. benchmarking
+- Make run_mcmc save results and parameters used together with
 
 Done:
 - Save imput data in log
