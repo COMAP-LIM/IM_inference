@@ -25,9 +25,9 @@ n_pix_y = 22
 sigma_T = 11 * np.sqrt(2)  # 11.0  # 11  # 41.5/np.sqrt(40)#23.25# MuK, Li,  2*11 = 1500 h
 
 
-halo_catalogue_folder = 'catalogues/'
+# halo_catalogue_folder = 'catalogues/'
 
-min_mass = 2.5e10  # 1e12  # 2.5e10
+# min_mass = 2.5e10  # 1e12  # 2.5e10
 
 # field of view in degrees, field size
 fov_x = 1.5
