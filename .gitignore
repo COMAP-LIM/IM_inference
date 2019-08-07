@@ -25,3 +25,10 @@ some_catalogues/
 new_params.py
 cov_output/
 check_chi2.py
+mcmc_small.py
+exp_small.py
+.pytest_cache/
+true_lum_func.py
+tex/
+halo_rel.py
+comp.py

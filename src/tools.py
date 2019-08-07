@@ -49,6 +49,14 @@ def set_up_mcmc(mcmc_params, exp_params):
         model = src.Model.Mhalo_to_Lco_Li(exp_params, map_obj)
     if (mcmc_params.mcmc_model == 'simp_Li'):
         model = src.Model.Simplified_Li(exp_params, map_obj)
+    if (mcmc_params.mcmc_model == 'univ'):
+        model = src.Model.Universe_Machine(exp_params, map_obj)
+    if (mcmc_params.mcmc_model == 'power'):
+        model = src.Model.DoublePowerLaw(exp_params, map_obj)
+    if (mcmc_params.mcmc_model == 'Lco_z'):
+        model = src.Model.Mhalo_to_Lco_z(exp_params, map_obj)
+    if (mcmc_params.mcmc_model == 'Lco_z_cov'):
+        model = src.Model.Mhalo_to_Lco_z_Cov(exp_params, map_obj)
 
     model.set_up(mcmc_params)
 
@@ -547,3 +555,23 @@ def make_picklable(modules):
 #     # make parameter files pickable
 #     copyreg.pickle(type(exp_params), reduce_mod)
 #     copyreg.pickle(type(mcmc_params), reduce_mod)
+
+
+def add_log_normal_scatter(data, dex):
+    """
+    Return array x, randomly scattered by a log-normal distribution
+    with sigma=dexscatter.
+    [via @tonyyli - https://github.com/dongwooc/imapper2]
+    Note: scatter maintains mean in linear space (not log space).
+    """
+    if (dex <= 0):
+        return data
+    # Calculate random scalings
+    # Stdev in log space (DIFFERENT from stdev in linear space),
+    # note: ln(10)=2.302585
+    sigma = dex * 2.302585
+    mu = -0.5 * sigma**2
+
+    randscaling = np.random.lognormal(mu, sigma, data.shape)
+    xscattered = np.where(data > 0, data * randscaling, data)
+    return xscattered

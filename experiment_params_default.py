@@ -22,7 +22,7 @@ n_pix_y = 22
 
 # should be calculated later
 # sigma_T = 11.#2.75#1e9  # muK, noise Haavard
-sigma_T = 11 * np.sqrt(2)  # 11.0  # 11  # 41.5/np.sqrt(40)#23.25# MuK, Li,  2*11 = 1500 h
+sigma_T = 11  # * np.sqrt(2)  # 11.0  # 11  # 41.5/np.sqrt(40)#23.25# MuK, Li,  2*11 = 1500 h
 
 
 # halo_catalogue_folder = 'catalogues/'

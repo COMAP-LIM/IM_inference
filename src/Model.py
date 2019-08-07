@@ -149,7 +149,7 @@ class Mhalo_to_Lco(Model):
         #     exec(("self.all_halos_%s.append("
         #           "src.tools.cull_peakpatch_catalogue("
         #           "halos, self.exp_params.min_mass, self.map_obj))") % j)
-        print("All halos loaded!")
+        # print("All halos loaded!")
 
     def T_line(self, halos):  # map, halos
         """
@@ -196,7 +196,6 @@ class Mhalo_to_Lco(Model):
             # k = i % self.list_size
             # #exec("h = %i" % 2)#self.all_halos_%s[%i]" % (str(j), k))
             # halos = eval("self.all_halos_%s[%i]" % (str(j), k))
-
         halos.nu = map_obj.nu_rest / (halos.redshift + 1)
         halos.Lco = self.calculate_Lco(halos, model_params)
 
@@ -466,3 +465,166 @@ class Simplified_Li(Mhalo_to_Lco):
         randscaling = np.random.lognormal(mu, sigma, data.shape)
         xscattered = np.where(data > 0, data * randscaling, data)
         return xscattered
+
+
+class Universe_Machine(Mhalo_to_Lco):
+
+    def __init__(self, exp_params, map_obj):
+        self.label = 'univ'
+        self.n_params = 7
+        super().__init__(exp_params, map_obj)
+
+    def mcmc_walker_initial_positions(self, prior_params, n_walkers):
+        p_par = np.transpose(prior_params)
+        mean, sigma = p_par[0], p_par[1]
+        initial_pos = mean + sigma * np.random.randn(n_walkers, len(mean))
+        initial_pos[:, 6] = np.abs(initial_pos[:, 6])
+        return initial_pos
+
+    def ln_prior(self, model_params, prior_params):
+        ln_prior = 0.0
+        # print('model_params\n', model_params)
+        if (model_params[6] < 0):
+            return - np.infty
+        for m_par, p_par in zip(model_params, prior_params):
+            ln_prior += norm.logpdf(m_par,
+                                    loc=p_par[0],
+                                    scale=p_par[1])
+        return ln_prior
+
+    def calculate_Lco(self, halos, model_params=None):
+        if model_params is None:
+            print('Missing model params in calculate_Lco')
+        else:
+            A, B, logC, logM, D, logG, sigma = model_params
+        logm = np.log10(halos.M) - logM
+        Lcop = 10**logC * (1 / (10**(logm * A) + 10**(logm * B)) +
+                           10**logG * np.exp(-logm**2 / (2 * D**2)))
+        Lco = 4.9e-5 * Lcop
+        Lco = src.tools.add_log_normal_scatter(Lco, sigma)
+        return Lco
+
+
+class DoublePowerLaw(Mhalo_to_Lco):
+
+    def __init__(self, exp_params, map_obj):
+        self.label = 'power'
+        self.n_params = 5
+        super().__init__(exp_params, map_obj)
+
+    def mcmc_walker_initial_positions(self, prior_params, n_walkers):
+        p_par = np.transpose(prior_params)
+        mean, sigma = p_par[0], p_par[1]
+        initial_pos = mean + sigma * np.random.randn(n_walkers, len(mean))
+        initial_pos[:, 4] = np.abs(initial_pos[:, 4])
+        return initial_pos
+
+    def ln_prior(self, model_params, prior_params):
+        ln_prior = 0.0
+        # print('model_params\n', model_params)
+        if (model_params[4] < 0):
+            return - np.infty
+        for m_par, p_par in zip(model_params, prior_params):
+            ln_prior += norm.logpdf(m_par,
+                                    loc=p_par[0],
+                                    scale=p_par[1])
+        return ln_prior
+
+    def calculate_Lco(self, halos, model_params=None):
+        if model_params is None:
+            print('Missing model params in calculate_Lco')
+        else:
+            A, B, logC, logM, sigma = model_params
+        logm = np.log10(halos.M) - logM
+        Lcop = 10**logC * (1 / (10**(logm * A) + 10**(logm * B)))
+        Lco = 4.9e-5 * Lcop
+        Lco = src.tools.add_log_normal_scatter(Lco, sigma)
+        return Lco
+
+
+class DoublePowerLawCov(DoublePowerLaw):
+    def __init__(self, exp_params, map_obj):
+        super().__init__(exp_params, map_obj)
+        self.label = 'power_cov'
+
+    def mcmc_walker_initial_positions(self, prior_params, n_walkers):
+        # p_par = np.transpose(prior_params)
+        mu, cov = prior_params[0], prior_params[1]
+        initial_pos = np.random.multivariate_normal(mu, cov, n_walkers)
+        initial_pos[:, 4] = np.abs(initial_pos[:, 4])
+        return initial_pos
+    
+    def ln_prior(self, model_params, prior_params):
+        ln_prior = 0.0
+        mu, cov = prior_params[0], prior_params[1]
+        inv_cov_mat = np.inverse(cov)  # print('model_params\n', model_params)
+        if (model_params[4] < 0):
+            return - np.infty
+        ln_prior = - 0.5 * (
+            np.matmul((model_params - mu), np.matmul(inv_cov_mat, (model_params - mu)))
+        )
+        return ln_prior
+
+
+class Mhalo_to_Lco_z(Mhalo_to_Lco):
+
+    def __init__(self, exp_params, map_obj):
+        self.label = 'Lco_z'
+        self.n_params = 2
+        super().__init__(exp_params, map_obj)
+
+    def mcmc_walker_initial_positions(self, prior_params, n_walkers):
+        p_par = np.transpose(prior_params)
+        mean, sigma = p_par[0], p_par[1]
+        initial_pos = mean + sigma * np.random.randn(n_walkers, len(mean))
+        initial_pos[:, 1] = np.abs(initial_pos[:, 1])
+        # print('init_pos', initial_pos)
+        return initial_pos
+
+    def ln_prior(self, model_params, prior_params):
+        ln_prior = 0.0
+        if (model_params[1] < 0):
+            return - np.infty
+        for m_par, p_par in zip(model_params, prior_params):
+            ln_prior += norm.logpdf(m_par,
+                                    loc=p_par[0],
+                                    scale=p_par[1])
+        return ln_prior
+
+    def calculate_Lco(self, halos, model_param=None):  # halos, coeffs
+        """
+        Luminosity in units of L_sun, halos mass in units of M_sun
+        """
+        A = model_param[0]
+
+        # z0 = model_param[1]
+        z0 = 2.9
+        sig2 = model_param[1] ** 2
+        Lco = 10**A * np.exp( -(halos.redshift - z0) ** 2 / sig2)
+        return Lco
+
+
+
+class Mhalo_to_Lco_z_Cov(Mhalo_to_Lco_z):
+    def __init__(self, exp_params, map_obj):
+        super().__init__(exp_params, map_obj)
+        self.label = 'Lco_z_cov'
+        
+    def mcmc_walker_initial_positions(self, prior_params, n_walkers):
+        # p_par = np.transpose(prior_params)
+        mu, cov = prior_params[0], prior_params[1]
+
+        initial_pos = np.random.multivariate_normal(mu, cov, n_walkers)
+        initial_pos[:, 1] = np.abs(initial_pos[:, 1])
+        return initial_pos
+    
+    def ln_prior(self, model_params, prior_params):
+        ln_prior = 0.0
+        mu, cov = prior_params[0], prior_params[1]
+        inv_cov_mat = np.linalg.inv(cov)  # print('model_params\n', model_params)
+        if (model_params[1] < 0):
+            return - np.infty
+        ln_prior = - 0.5 * (
+            np.matmul((model_params - mu), np.matmul(inv_cov_mat, (model_params - mu)))
+        )
+        return ln_prior
