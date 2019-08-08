@@ -3,6 +3,13 @@ import numpy as np
 
 def ln_chi_squared(data, mean, variance):
     loglike = - 0.5 * np.sum((data - mean)**2 / variance + np.log(variance))
+
+    # print(np.sum((data - mean)**2 / variance))
+    # print(np.array2string(data, separator=','))
+    # print(np.array2string(mean, separator=','))
+    # print(np.array2string(np.sqrt(variance), separator=','))
+    # # print(data, mean)
+    # # print(np.sqrt(variance))
     if np.isfinite(loglike):
         return loglike
     else:

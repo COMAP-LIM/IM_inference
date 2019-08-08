@@ -557,7 +557,7 @@ class DoublePowerLawCov(DoublePowerLaw):
     def ln_prior(self, model_params, prior_params):
         ln_prior = 0.0
         mu, cov = prior_params[0], prior_params[1]
-        inv_cov_mat = np.inverse(cov)  # print('model_params\n', model_params)
+        inv_cov_mat = np.linalg.inv(cov)  # print('model_params\n', model_params)
         if (model_params[4] < 0):
             return - np.infty
         ln_prior = - 0.5 * (
@@ -615,6 +615,10 @@ class Mhalo_to_Lco_z_Cov(Mhalo_to_Lco_z):
         mu, cov = prior_params[0], prior_params[1]
 
         initial_pos = np.random.multivariate_normal(mu, cov, n_walkers)
+        initial_pos[:, 0] = np.abs(initial_pos[:, 0])
+        for pos in initial_pos[:, 0]:
+            if pos > 10: 
+                pos = pos % 10 
         initial_pos[:, 1] = np.abs(initial_pos[:, 1])
         return initial_pos
     
@@ -622,9 +626,14 @@ class Mhalo_to_Lco_z_Cov(Mhalo_to_Lco_z):
         ln_prior = 0.0
         mu, cov = prior_params[0], prior_params[1]
         inv_cov_mat = np.linalg.inv(cov)  # print('model_params\n', model_params)
+        if (model_params[0] < 0):
+            return - np.infty
+        if (model_params[0] > 10):
+            return - np.infty
         if (model_params[1] < 0):
             return - np.infty
         ln_prior = - 0.5 * (
             np.matmul((model_params - mu), np.matmul(inv_cov_mat, (model_params - mu)))
         )
+        # print('ln_prior: ', ln_prior, model_params, mu)
         return ln_prior

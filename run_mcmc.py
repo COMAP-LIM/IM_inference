@@ -91,6 +91,7 @@ def lnprob(model_params, model, observables, extra_observables, map_obj):
         observable.calculate_mean(mcmc_params.n_realizations)
     for observable in extra_observables:
         observable.calculate_mean(mcmc_params.n_realizations)
+
     # calculate the actual likelihoods
     ln_likelihood = 0.0
     n_samp = mcmc_params.n_realizations / mcmc_params.n_patches

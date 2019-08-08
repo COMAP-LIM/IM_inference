@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import chi2
 import os
-import mcmc_params
+# import mcmc_params
 import h5py
 import importlib
 
@@ -63,7 +63,7 @@ with open(filename_samp) as my_file:
 
     samples = my_array[:, 1:]
 
-n_cut = n_walkers * 400
+n_cut = n_walkers * 1
 
 print(samples.shape)
 data = samples[n_cut:]
@@ -81,6 +81,6 @@ gelman_rubin_converged = c.diagnostic.gelman_rubin()
 # And also using the Geweke metric
 geweke_converged = c.diagnostic.geweke()
 
-fig = c.plotter.plot_walks(convolve=100)
+fig = c.plotter.plot_walks(convolve=50)
 
 plt.show()
