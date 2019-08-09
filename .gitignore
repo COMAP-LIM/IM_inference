@@ -32,3 +32,5 @@ true_lum_func.py
 tex/
 halo_rel.py
 comp.py
+mcmc_params.py
+experiment_params.py

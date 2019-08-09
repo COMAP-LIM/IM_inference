@@ -53,6 +53,8 @@ def set_up_mcmc(mcmc_params, exp_params):
         model = src.Model.Universe_Machine(exp_params, map_obj)
     if (mcmc_params.mcmc_model == 'power'):
         model = src.Model.DoublePowerLaw(exp_params, map_obj)
+    if (mcmc_params.mcmc_model == 'power_cov'):
+        model = src.Model.DoublePowerLawCov(exp_params, map_obj)
     if (mcmc_params.mcmc_model == 'Lco_z'):
         model = src.Model.Mhalo_to_Lco_z(exp_params, map_obj)
     if (mcmc_params.mcmc_model == 'Lco_z_cov'):
