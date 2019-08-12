@@ -560,6 +560,8 @@ class DoublePowerLawCov(DoublePowerLaw):
         inv_cov_mat = np.linalg.inv(cov)  # print('model_params\n', model_params)
         if (model_params[4] < 0):
             return - np.infty
+        if (model_params[0] > model_params[1]):
+            return - np.infty
         ln_prior = - 0.5 * (
             np.matmul((model_params - mu), np.matmul(inv_cov_mat, (model_params - mu)))
         )

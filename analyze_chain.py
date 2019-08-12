@@ -59,6 +59,10 @@ mcmc_params_fp = (
 )
 mcmc_params = importlib.import_module(mcmc_params_fp)
 
+try:
+    ncut = int(sys.argv[2])
+except:
+    ncut = 300
 # filename_ps = os.path.join(output_dir, 'blob',
 #                            'blob_ps_{0:d}.dat'.format(runid))
 
@@ -103,14 +107,15 @@ with open(filename_samp) as my_file:
 
     samples = my_array[:, 1:]
 
-n_cut = n_walkers * 1
+n_cut = n_walkers * ncut
 
 print(samples.shape)
-data = samples[n_cut:]
+
+data = samples
 
 model = mcmc_params.mcmc_model
 # parameters = mcmc_params.labels[model]
-parameters = mcmc_params.labels[model]
+parameters = [r'$A$', r'$B$', r'$\log C$', r'$\log M$', r'$\sigma$'] #mcmc_params.labels[model]
 prior_params = mcmc_params.prior_params[model]
 mu, cov = prior_params[0], np.array(prior_params[1])
 sigma = np.sqrt(cov.diagonal())
@@ -128,16 +133,18 @@ fig = c.plotter.plot_walks(convolve=50)
 
 f, axes = insert_gaussian_priors_in_cornerplot_cov(cov, mu, 'r')
 
+data = samples[n_cut:]
+
+truth = mcmc_params.model_params_true[model]
 
 corner.corner(data, fig=f, show_titles=True, plot_datapoints=False,
-              plot_density=False, levels=(0.6827, 0.9545), hist_kwargs={"normed":'True'})
+              plot_density=False, truths=truth,  levels=(0.6827, 0.9545), hist_kwargs={"normed":'True'})
 
 factor3 = 5
 
-for i in range(len(mu)):                                                                                                                                     
-    axes[i, i].set_xlim(-factor3 * sigma[i] + mu[i], factor3 * sigma[i] + mu[i])                                                                             
-    for j in range(i):                                                                                                                                       
-        axes[i, j].set_xlim(-factor3 * sigma[j] + mu[j], factor3 * sigma[j] + mu[j])                                                                         
+for i in range(len(mu)):
+    axes[i, i].set_xlim(-factor3 * sigma[i] + mu[i], factor3 * sigma[i] + mu[i])
+    for j in range(i):
+        axes[i, j].set_xlim(-factor3 * sigma[j] + mu[j], factor3 * sigma[j] + mu[j]) 
         axes[i, j].set_ylim(-factor3 * sigma[i] + mu[i], factor3 * sigma[i] + mu[i])
-
 plt.show()
