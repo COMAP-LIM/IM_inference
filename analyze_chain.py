@@ -114,8 +114,8 @@ print(samples.shape)
 data = samples
 
 model = mcmc_params.mcmc_model
-# parameters = mcmc_params.labels[model]
-parameters = [r'$A$', r'$B$', r'$\log C$', r'$\log M$', r'$\sigma$'] #mcmc_params.labels[model]
+parameters = mcmc_params.labels[model]
+#parameters = [r'$A$', r'$B$', r'$\log C$', r'$\log M$', r'$\sigma$'] #mcmc_params.labels[model]
 prior_params = mcmc_params.prior_params[model]
 mu, cov = prior_params[0], np.array(prior_params[1])
 sigma = np.sqrt(cov.diagonal())
@@ -137,7 +137,7 @@ data = samples[n_cut:]
 
 truth = mcmc_params.model_params_true[model]
 
-corner.corner(data, fig=f, show_titles=True, plot_datapoints=False,
+corner.corner(data, fig=f, show_titles=True, labels=parameters, plot_datapoints=True,
               plot_density=False, truths=truth,  levels=(0.6827, 0.9545), hist_kwargs={"normed":'True'})
 
 factor3 = 5
@@ -147,4 +147,5 @@ for i in range(len(mu)):
     for j in range(i):
         axes[i, j].set_xlim(-factor3 * sigma[j] + mu[j], factor3 * sigma[j] + mu[j]) 
         axes[i, j].set_ylim(-factor3 * sigma[i] + mu[i], factor3 * sigma[i] + mu[i])
+plt.savefig('cornerplot_opt.pdf', bbox_inches='tight')
 plt.show()

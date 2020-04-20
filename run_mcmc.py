@@ -55,6 +55,9 @@ else:
         'data_id{0:d}.h5'.format(cov_id))
     exp_params = importlib.import_module(exp_params_fp)
     cov_data = h5py.File(data_fp, 'r')
+    cov_mat_0 = np.array(cov_data['cov_mat'][:])
+    var_ind_0 = np.array(cov_data['var_indep_0'][:]) 
+    cov_data.close()
 exp_src = inspect.getsource(exp_params)
 
 
@@ -73,9 +76,14 @@ def lnprob(model_params, model, observables, extra_observables, map_obj):
 
     for i in range(mcmc_params.n_realizations):
         if exp_params.map_smoothing:
-            map_obj.map, map_obj.lum_func = src.tools.create_smoothed_map(
-                model, model_params
-            )
+            if exp_params.FWHM_nu is None:
+                map_obj.map, map_obj.lum_func = src.tools.create_smoothed_map(
+                    model, model_params
+                )
+            else:
+                map_obj.map, map_obj.lum_func = src.tools.create_smoothed_map_3d(
+                    model, model_params
+                )
         else:
             map_obj.map, map_obj.lum_func = model.generate_map(
                 model_params)
@@ -107,7 +115,9 @@ def lnprob(model_params, model, observables, extra_observables, map_obj):
                     )
                 )
     elif (mcmc_params.likelihood == 'chi_squared_cov'):
-        n_data = len(cov_data['var_indep_0'])
+        #n_data = len(var_ind_0)
+        n_cov = len(var_ind_0)
+        n_data = sum([len(observable.data) for observable in observables])
         i = 0
         data = np.zeros(n_data)
         mean = np.zeros(n_data)
@@ -118,16 +128,34 @@ def lnprob(model_params, model, observables, extra_observables, map_obj):
             mean[i:i + n_data_obs] = observable.mean
             ind_var[i:i + n_data_obs] = observable.independent_var
             i += n_data_obs
-        var_ratio = np.sqrt(
-            np.outer(ind_var, ind_var)
-            / np.outer(cov_data['var_indep_0'], cov_data['var_indep_0'])
-        )
-        cov_mat = (1 + n_samp) / n_samp * (
-            cov_data['cov_mat'] * var_ratio / mcmc_params.n_patches
-        )
+        if (len(observables) > 1):
+            var_ratio = np.sqrt(
+                np.outer(ind_var, ind_var)
+                / np.outer(var_ind_0[:], var_ind_0[:])
+            )
+            cov_mat = (1 + n_samp) / n_samp * (
+                cov_mat_0[:] * var_ratio / mcmc_params.n_patches
+            )
+        elif (observables[0].label == 'ps'):
+            var_ratio = np.sqrt(
+                np.outer(ind_var, ind_var)
+                / np.outer(var_ind_0[:n_data_obs], var_ind_0[:n_data_obs])
+            )
+            cov_mat = (1 + n_samp) / n_samp * (
+                cov_mat_0[:n_data_obs, :n_data_obs] * var_ratio / mcmc_params.n_patches
+            )
+        else:
+            var_ratio = np.sqrt(
+                np.outer(ind_var, ind_var)
+            / np.outer(var_ind_0[n_cov-n_data_obs:], var_ind_0[n_cov-n_data_obs:])
+            )
+            cov_mat = (1 + n_samp) / n_samp * (
+                cov_mat_0[n_cov-n_data_obs:, n_cov-n_data_obs:] * var_ratio / mcmc_params.n_patches
+            )
         # print(cov_mat)
         ln_likelihood += src.likelihoods.ln_chi_squared_cov(
             data, mean, cov_mat)
+
     ln_post = ln_prior + ln_likelihood
     if not np.isfinite(ln_post):
         ln_post = -np.infty

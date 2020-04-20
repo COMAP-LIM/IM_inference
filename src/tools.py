@@ -55,6 +55,8 @@ def set_up_mcmc(mcmc_params, exp_params):
         model = src.Model.DoublePowerLaw(exp_params, map_obj)
     if (mcmc_params.mcmc_model == 'power_cov'):
         model = src.Model.DoublePowerLawCov(exp_params, map_obj)
+    if (mcmc_params.mcmc_model == 'simp_power_cov'):
+        model = src.Model.SimplifiedPowerLawCov(exp_params, map_obj)
     if (mcmc_params.mcmc_model == 'Lco_z'):
         model = src.Model.Mhalo_to_Lco_z(exp_params, map_obj)
     if (mcmc_params.mcmc_model == 'Lco_z_cov'):
@@ -79,7 +81,7 @@ def set_up_cov(exp_params):
 
     n_maps_x = int(np.floor(fov_max / small_map.fov_x))
     n_maps_y = int(np.floor(fov_max / small_map.fov_y))
-    
+    # print("n_maps", fov_max, small_map.fov_x)
     full_map.fov_x = small_map.fov_x * n_maps_x
     full_map.fov_y = small_map.fov_y * n_maps_y
     full_map.n_pix_x = n_maps_x * small_map.n_pix_x
@@ -100,6 +102,8 @@ def set_up_cov(exp_params):
     full_map.volume = n_maps_x * n_maps_y * small_map.volume
     full_map.n_maps_x = n_maps_x
     full_map.n_maps_y = n_maps_y
+    
+    #print("in setup ", full_map.pix_binedges_x, full_map.fov_x, full_map.n_pix_x) 
     # Add more if-statements as other observables are implemented.
     # At some point we should add some checks to make sure that a
     # valid model, and a set of observables are actually picked.
@@ -125,6 +129,8 @@ def set_up_cov(exp_params):
         model = src.Model.Mhalo_to_Lco_Li(exp_params, full_map)
     if (exp_params.cov_model == 'simp_Li'):
         model = src.Model.Simplified_Li(exp_params, full_map)
+    if (exp_params.cov_model == 'power_cov'):
+        model = src.Model.DoublePowerLawCov(exp_params, full_map)
 
     # model.set_up()
 
@@ -159,9 +165,14 @@ def get_data(mcmc_params, exp_params, model,
         model_params = mcmc_params.model_params_true[model.label]
         for i in range(mcmc_params.n_patches):
             if exp_params.map_smoothing:
-                maps[i], _ = create_smoothed_map(
-                    model, model_params
-                )
+                if exp_params.FWHM_nu is None:
+                    maps[i], _ = create_smoothed_map(
+                        model, model_params
+                    )
+                else:
+                    maps[i], _ = create_smoothed_map_3d(
+                        model, model_params
+                    )
             else:
                 maps[i], _ = model.generate_map(
                     model_params)
@@ -170,9 +181,9 @@ def get_data(mcmc_params, exp_params, model,
     if mcmc_params.save_file:
         print('saving map to file')
         np.save(mcmc_params.map_filename, maps)
-        map_fp = os.path.join(mcmc_params.output_dir, 'blob',
-                              'map_run{0:d}.npy'.format(runid))
-        np.save(map_fp, maps)
+    map_fp = os.path.join(mcmc_params.output_dir, 'blob',
+                          'map_run{0:d}.npy'.format(runid))
+    np.save(map_fp, maps)
 
     data = dict()
     for i in range(mcmc_params.n_patches):
@@ -289,7 +300,8 @@ def create_smoothed_map(model, model_params, halos=None):
 
     # make high-resolution grid to make map
     model.map_obj.Ompix /= factor * factor
-
+    #print("binedges_first", model.map_obj.pix_binedges_x)
+    
     model.map_obj.pix_binedges_x = np.linspace(
         model.map_obj.pix_binedges_x[0], model.map_obj.pix_binedges_x[-1],
         factor * (len(model.map_obj.pix_binedges_x) - 1) + 1)
@@ -302,7 +314,8 @@ def create_smoothed_map(model, model_params, halos=None):
         model.map_obj.map, extra = model.generate_map(model_params)
     else:
         model.map_obj.map, extra = model.generate_map(model_params, halos)
-
+    
+    #print("binedges second", model.map_obj.pix_binedges_x)
     pixwidth = (
         model.map_obj.pix_binedges_x[1] - model.map_obj.pix_binedges_x[0]
     ) * 60
@@ -328,6 +341,98 @@ def create_smoothed_map(model, model_params, halos=None):
     
     # degrade map back to low-res grid
     model.map_obj.map = degrade(model.map_obj.map, factor)
+    return model.map_obj.map, extra
+
+
+def degrade_3d(largemap, factor, axes=[0, 1, 2]):
+    dims = np.array(largemap.shape)[axes]
+    rows, cols, freqs = dims // factor
+    if any(dims % factor > 0):
+        print("Invalid degration factor!")
+        sys.exit()
+    return largemap.reshape(
+        rows, largemap.shape[0] // rows,
+        cols, largemap.shape[1] // cols,
+        freqs, largemap.shape[2] // freqs
+        ).mean(axis=1).mean(axis=2).mean(axis=3)
+    
+
+def gaussian_kernel_3d(sigma_x, sigma_y, sigma_z, n_sigma=5.0):
+    size_y = int(n_sigma * sigma_y)
+    size_x = int(n_sigma * sigma_x)
+    size_z = int(n_sigma * sigma_z)
+    x, y, z = scipy.mgrid[-size_x:size_x + 1, -size_y:size_y + 1, -size_z:size_z + 1]
+    g = np.exp(-(x**2 / (2. * sigma_x**2) + y**2 / (2. * sigma_y**2) + z**2 / (2. * sigma_z**2)))
+    return g / g.sum()
+
+
+def gaussian_smooth_3d(mymap, sigma_x, sigma_y, sigma_z, n_sigma=5.0):
+    kernel = gaussian_kernel_3d(sigma_x, sigma_y, sigma_z, n_sigma=n_sigma)
+    smoothed_map = signal.fftconvolve(mymap, kernel, mode='same')
+    return smoothed_map
+
+
+def create_smoothed_map_3d(model, model_params, halos=None):
+    exp_params = model.exp_params
+    factor = exp_params.resolution_factor
+
+    # make high-resolution grid to make map
+    model.map_obj.Ompix /= factor * factor
+    model.map_obj.dnu /= factor
+
+    model.map_obj.pix_binedges_x = np.linspace(
+        model.map_obj.pix_binedges_x[0], model.map_obj.pix_binedges_x[-1],
+        factor * (len(model.map_obj.pix_binedges_x) - 1) + 1)
+
+    model.map_obj.pix_binedges_y = np.linspace(
+        model.map_obj.pix_binedges_y[0], model.map_obj.pix_binedges_y[-1],
+        factor * (len(model.map_obj.pix_binedges_y) - 1) + 1)
+
+    model.map_obj.nu_binedges = np.linspace(
+        model.map_obj.nu_binedges[0], model.map_obj.nu_binedges[-1],
+        factor * (len(model.map_obj.nu_binedges) - 1) + 1)
+
+    # make high-resolution map
+    if halos is None:
+        model.map_obj.map, extra = model.generate_map(model_params)
+    else:
+        model.map_obj.map, extra = model.generate_map(model_params, halos)
+    
+    # print(model.map_obj.map.shape)
+    pixwidth = (
+        model.map_obj.pix_binedges_x[1] - model.map_obj.pix_binedges_x[0]
+    ) * 60
+    
+    dnu = np.abs(model.map_obj.nu_binedges[1] - model.map_obj.nu_binedges[0])
+    # print(dnu)
+    sigma_ang = exp_params.FWHM / pixwidth / np.sqrt(8 * np.log(2))
+    sigma_z = exp_params.FWHM_nu / dnu / np.sqrt(8 * np.log(2))
+    # print(sigma_ang, sigma_z)
+    # convolve map with gaussian beam
+    model.map_obj.map = gaussian_smooth_3d(model.map_obj.map, sigma_ang, sigma_ang, sigma_z)
+
+    # plt.figure()
+    # plt.imshow(filteredmap[:, :, 0], interpolation='none')
+    # plt.show()
+    
+    # change grid to low resolution again
+    model.map_obj.Ompix *= factor * factor
+    model.map_obj.dnu *= factor
+
+    model.map_obj.pix_binedges_x = np.linspace(
+        model.map_obj.pix_binedges_x[0], model.map_obj.pix_binedges_x[-1],
+        (len(model.map_obj.pix_binedges_x) - 1) / factor + 1)
+
+    model.map_obj.pix_binedges_y = np.linspace(
+        model.map_obj.pix_binedges_y[0], model.map_obj.pix_binedges_y[-1],
+        (len(model.map_obj.pix_binedges_y) - 1) / factor + 1)
+
+    model.map_obj.nu_binedges = np.linspace(
+        model.map_obj.nu_binedges[0], model.map_obj.nu_binedges[-1],
+        (len(model.map_obj.nu_binedges) - 1) / factor + 1)
+    
+    # degrade map back to low-res grid
+    model.map_obj.map = degrade_3d(model.map_obj.map, factor)
     return model.map_obj.map, extra
 
 

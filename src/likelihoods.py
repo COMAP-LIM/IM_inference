@@ -17,7 +17,10 @@ def ln_chi_squared(data, mean, variance):
 
 
 def ln_chi_squared_cov(data, mean, cov_mat):
-    inv_cov_mat = np.linalg.inv(cov_mat)
+    try: 
+        inv_cov_mat = np.linalg.inv(cov_mat)
+    except:
+        return -np.infty
     cov_det = np.linalg.det(cov_mat)
 
     if cov_det <= 0:

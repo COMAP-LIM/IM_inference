@@ -57,9 +57,14 @@ def get_data(exp_params, model, observables,
     model_params = exp_params.model_params_cov[exp_params.cov_model]
 
     if exp_params.map_smoothing:
-        full_map.map, full_map.lum_func = src.tools.create_smoothed_map(
-            model, model_params, halos=halos
-        )
+        if exp_params.FWHM_nu is None:
+            full_map.map, full_map.lum_func = src.tools.create_smoothed_map(
+                model, model_params, halos=halos
+            )
+        else:
+            full_map.map, full_map.lum_func = src.tools.create_smoothed_map_3d(
+                model, model_params, halos=halos
+            )
     else:
         full_map.map, full_map.lum_func = model.generate_map(
             model_params, halos=halos)
@@ -104,9 +109,11 @@ data = np.zeros((n_data, full_map.n_maps_x * full_map.n_maps_y,
 lum_hist = np.zeros((len(exp_params.lumfunc_bins) - 1,
                      n_catalogues_local))
 model.all_halos = []
+print(n_catalogues_local)
 for i in range(n_catalogues_local):
     halo_fp = os.path.join(exp_params.cov_catalogue_folder,
                            halo_fp_list[my_indices[i]])
+    print(halo_fp)
     halos, _ = src.tools.load_peakpatch_catalogue(halo_fp)
     halos = src.tools.cull_peakpatch_catalogue(
         halos, exp_params.min_mass, full_map)
