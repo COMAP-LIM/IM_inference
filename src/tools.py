@@ -421,15 +421,15 @@ def create_smoothed_map_3d(model, model_params, halos=None):
 
     model.map_obj.pix_binedges_x = np.linspace(
         model.map_obj.pix_binedges_x[0], model.map_obj.pix_binedges_x[-1],
-        (len(model.map_obj.pix_binedges_x) - 1) / factor + 1)
+        (len(model.map_obj.pix_binedges_x) - 1) // factor + 1)
 
     model.map_obj.pix_binedges_y = np.linspace(
         model.map_obj.pix_binedges_y[0], model.map_obj.pix_binedges_y[-1],
-        (len(model.map_obj.pix_binedges_y) - 1) / factor + 1)
+        (len(model.map_obj.pix_binedges_y) - 1) // factor + 1)
 
     model.map_obj.nu_binedges = np.linspace(
         model.map_obj.nu_binedges[0], model.map_obj.nu_binedges[-1],
-        (len(model.map_obj.nu_binedges) - 1) / factor + 1)
+        (len(model.map_obj.nu_binedges) - 1) // factor + 1)
     
     # degrade map back to low-res grid
     model.map_obj.map = degrade_3d(model.map_obj.map, factor)
@@ -585,7 +585,7 @@ def load_peakpatch_catalogue(filein):
     # creates empty class to put any cosmology info into
     cosmo = empty_table()
 
-    halo_info = np.load(filein)
+    halo_info = np.load(filein, allow_pickle=True)
 
     # get cosmology from halo catalogue
     params_dict = halo_info['cosmo_header'][()]
