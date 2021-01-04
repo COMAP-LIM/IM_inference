@@ -552,8 +552,9 @@ class DoublePowerLawCov(DoublePowerLaw):
         mu, cov = prior_params[0], prior_params[1]
         initial_pos = np.random.multivariate_normal(mu, cov, n_walkers)
         for i in range(n_walkers):
-            initial_pos[i, 0] = np.random.uniform(-25.0, -1.0)
-            initial_pos[i, 1] = np.random.uniform(-2.0, 15.0)
+            ## only use for pess prior
+            #initial_pos[i, 0] = np.random.uniform(-25.0, -1.0)
+            #initial_pos[i, 1] = np.random.uniform(-2.0, 15.0)
             if (initial_pos[i, 0] > initial_pos[i, 1]):
                 A = initial_pos[i, 0]
                 B = initial_pos[i, 1]
@@ -569,29 +570,83 @@ class DoublePowerLawCov(DoublePowerLaw):
     def ln_prior(self, model_params, prior_params):
         ln_prior = 0.0
         mu, cov = prior_params[0], prior_params[1]
-        # inv_cov_mat = np.linalg.inv(cov) 
+        inv_cov_mat = np.linalg.inv(cov) 
         # print('model_params\n', model_params)
-        inv_cov_mat = np.linalg.inv(np.array(cov)[2:, 2:]) 
+        # inv_cov_mat = np.linalg.inv(np.array(cov)[2:, 2:]) 
         if (model_params[4] < 0):
             return - np.infty
         if (model_params[0] > model_params[1]):
             return - np.infty
-        if (model_params[0] > -1.0):
-            return - np.infty
-        if (model_params[1] < -2.0):
-            return - np.infty
-        if (model_params[0] < -25.0):
-            return - np.infty
-        if (model_params[1] > 15.0):
-            return - np.infty
+        # if (model_params[0] > -1.0):
+        #     return - np.infty
+        # if (model_params[1] < -2.0):
+        #     return - np.infty
+        # if (model_params[0] < -25.0):
+        #     return - np.infty
+        # if (model_params[1] > 15.0):
+        #     return - np.infty
         
-        ln_prior = - 0.5 * (
-            np.matmul((model_params[2:] - mu[2:]), np.matmul(inv_cov_mat, (model_params[2:] - mu[2:])))
-        )
         # ln_prior = - 0.5 * (
-        #     np.matmul((model_params - mu), np.matmul(inv_cov_mat, (model_params - mu)))
+        #     np.matmul((model_params[2:] - mu[2:]), np.matmul(inv_cov_mat, (model_params[2:] - mu[2:])))
         # )
+        ln_prior = - 0.5 * (
+            np.matmul((model_params - mu), np.matmul(inv_cov_mat, (model_params - mu)))
+        )
         return ln_prior
+
+
+class DoublePowerLawCov_3par(Mhalo_to_Lco):
+    def __init__(self, exp_params, map_obj):
+        self.n_params = 3
+        self.label = 'power_cov_3par'
+        super().__init__(exp_params, map_obj)
+
+    def mcmc_walker_initial_positions(self, prior_params, n_walkers):
+        # p_par = np.transpose(prior_params)
+        mu, cov = prior_params[0], prior_params[1]
+        initial_pos = np.random.multivariate_normal(mu, cov, n_walkers)
+        for i in range(n_walkers):
+            ## only use for pess prior
+            #initial_pos[i, 0] = np.random.uniform(-25.0, -1.0)
+            #initial_pos[i, 1] = np.random.uniform(-2.0, 15.0)
+            if (initial_pos[i, 0] > initial_pos[i, 1]):
+                A = initial_pos[i, 0]
+                B = initial_pos[i, 1]
+                initial_pos[i, 0] = B
+                initial_pos[i, 1] = A
+            if (initial_pos[i, 0] > -1.0):
+                initial_pos[i, 0] = np.random.uniform(-4.0, -2.0)
+            if (initial_pos[i, 1] < -2.0):
+                initial_pos[i, 1] = np.random.uniform(-1.0, 1.0)
+        # initial_pos[:, 4] = np.abs(initial_pos[:, 4])
+        return initial_pos
+    
+    def ln_prior(self, model_params, prior_params):
+        ln_prior = 0.0
+        mu, cov = prior_params[0], prior_params[1]
+        inv_cov_mat = np.linalg.inv(cov) 
+        # print('model_params\n', model_params)
+        # inv_cov_mat = np.linalg.inv(np.array(cov)[2:, 2:]) 
+        if (model_params[0] > model_params[1]):
+            return - np.infty
+        ln_prior = - 0.5 * (
+            np.matmul((model_params - mu), np.matmul(inv_cov_mat, (model_params - mu)))
+        )
+        return ln_prior
+
+        
+    def calculate_Lco(self, halos, model_params=None):
+        if model_params is None:
+            print('Missing model params in calculate_Lco')
+        else:
+            A, B, logC = model_params
+        logM = 12.3
+        sigma = 0.42
+        logm = np.log10(halos.M) - logM
+        Lcop = 10**logC * (1 / (10**(logm * A) + 10**(logm * B)))
+        Lco = 4.9e-5 * Lcop
+        Lco = src.tools.add_log_normal_scatter(Lco, sigma)
+        return Lco
 
 
 class SimplifiedPowerLawCov(Mhalo_to_Lco):

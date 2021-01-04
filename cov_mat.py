@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import h5py
 
 import src.MapObj
@@ -19,7 +19,7 @@ from mpi4py import MPI
 if len(sys.argv) < 2:
     import experiment_params as exp_params
 else:
-    exp_params = importlib.import_module(sys.argv[2][:-3])
+    exp_params = importlib.import_module(sys.argv[-1][:-3])
 
 exp_src = inspect.getsource(exp_params)
 comm = MPI.COMM_WORLD
@@ -161,11 +161,11 @@ if my_rank == 0:
     hf.close()
 
     cov_divisor = np.sqrt(np.outer(var_indep, var_indep))
-    plt.imshow(cov / cov_divisor, interpolation='none', vmax=1.2)
-    plt.colorbar()
+#    plt.imshow(cov / cov_divisor, interpolation='none', vmax=1.2)
+#    plt.colorbar()
 
-    plt.figure()
-    plt.loglog(exp_params.luminosity,
-               exp_params.luminosity * lum_hist_avg)
-    plt.axis([1e4, 1e7, 1e-6, 1e-1])
-    plt.show()
+#    plt.figure()
+#    plt.loglog(exp_params.luminosity,
+#               exp_params.luminosity * lum_hist_avg)
+#    plt.axis([1e4, 1e7, 1e-6, 1e-1])
+#    plt.show()
