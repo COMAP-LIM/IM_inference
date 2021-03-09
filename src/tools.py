@@ -37,7 +37,7 @@ def set_up_mcmc(mcmc_params, exp_params):
     if 'lum' in mcmc_params.extra_observables:
         lum = src.Observable.Luminosity_Function()
         extra_observables.append(lum)
-
+    
     if (mcmc_params.mcmc_model == 'wn_ps'):
         model = src.Model.WhiteNoisePowerSpectrum(exp_params)
     if (mcmc_params.mcmc_model == 'pl_ps'):
@@ -55,6 +55,8 @@ def set_up_mcmc(mcmc_params, exp_params):
         model = src.Model.DoublePowerLaw(exp_params, map_obj)
     if (mcmc_params.mcmc_model == 'power_cov'):
         model = src.Model.DoublePowerLawCov(exp_params, map_obj)
+    if (mcmc_params.mcmc_model == 'power_cov_3par'):
+        model = src.Model.DoublePowerLawCov_3par(exp_params, map_obj)
     if (mcmc_params.mcmc_model == 'simp_power_cov'):
         model = src.Model.SimplifiedPowerLawCov(exp_params, map_obj)
     if (mcmc_params.mcmc_model == 'Lco_z'):
@@ -131,6 +133,8 @@ def set_up_cov(exp_params):
         model = src.Model.Simplified_Li(exp_params, full_map)
     if (exp_params.cov_model == 'power_cov'):
         model = src.Model.DoublePowerLawCov(exp_params, full_map)
+    if (exp_params.cov_model == 'power_cov_3par'):
+        model = src.Model.DoublePowerLawCov_3par(exp_params, full_map)
 
     # model.set_up()
 

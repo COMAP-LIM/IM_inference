@@ -21,8 +21,9 @@ import src.Observable
 import src.likelihoods
 import emcee
 
-# from schwimmbad import MPIPool # In future emcee release
-from emcee.utils import MPIPool
+from schwimmbad import MPIPool  # current emcee release
+# from emcee.utils import MPIPool  # old 
+from multiprocessing import Pool
 import sys
 import os
 import datetime
@@ -159,6 +160,7 @@ def lnprob(model_params, model, observables, extra_observables, map_obj):
     ln_post = ln_prior + ln_likelihood
     if not np.isfinite(ln_post):
         ln_post = -np.infty
+    
 
     return ln_post, (observables, extra_observables)
 
@@ -166,12 +168,13 @@ def lnprob(model_params, model, observables, extra_observables, map_obj):
 if __name__ == "__main__":
     src.tools.make_picklable((exp_params, mcmc_params))
     if mcmc_params.pool:
-        pool = MPIPool(loadbalance=True)
+        pool = MPIPool()
         n_pool = pool.size + 1
         if not pool.is_master():
             pool.wait()
             sys.exit(0)
     else:
+        pool = Pool(mcmc_params.n_threads)
         n_pool = mcmc_params.n_threads
     start_time = datetime.datetime.now()
     mcmc_chains_fp, mcmc_log_fp, samples_log_fp, blob_fp, runid = \
@@ -184,7 +187,11 @@ if __name__ == "__main__":
 
     src.tools.get_data(mcmc_params, exp_params, model,
                        observables, map_obj, runid)
-
+    
+    # filename = "test.h5"
+    # backend = emcee.backends.HDFBackend(filename)
+    # backend.reset(mcmc_params.n_walkers, model.n_params)
+    
     if mcmc_params.pool:
         sampler = emcee.EnsembleSampler(
             mcmc_params.n_walkers, model.n_params, lnprob,
@@ -194,29 +201,47 @@ if __name__ == "__main__":
         sampler = emcee.EnsembleSampler(
             mcmc_params.n_walkers, model.n_params, lnprob,
             args=(model, observables, extra_observables, map_obj),
-            threads=mcmc_params.n_threads)
+            pool=pool)
 
     pos = model.mcmc_walker_initial_positions(
         mcmc_params.prior_params[model.label], mcmc_params.n_walkers)
     samples = np.zeros((mcmc_params.n_steps,
                         mcmc_params.n_walkers,
                         model.n_params))
-
+        # for sample in sampler.sample(pos, iterations=mcmc_params.n_steps, progress=True):
+        #     # Only check convergence every 100 steps
+        #     if sampler.iteration % 10:
+        #         continue
+                
+        #     # Compute the autocorrelation time so far
+        #     # Using tol=0 means that we'll always get an estimate even
+        #     # if it isn't trustworthy
+        #     tau = sampler.get_autocorr_time(tol=0)
+        #     autocorr[index] = np.mean(tau)
+        #     index += 1
+        #     print(tau)
+        #     # Check convergence
+        #     converged = np.all(tau * 100 < sampler.iteration)
+        #     converged &= np.all(np.abs(old_tau - tau) / tau < 0.01)
+        #     if converged:
+        #         break
+        #     old_tau = tau
+                    
     i = 0
 
     while i < mcmc_params.n_steps:
         print('starting iteration %i out of %i of run %i' % (
             i + 1, mcmc_params.n_steps, runid),
-            datetime.datetime.now() - start_time)
+              datetime.datetime.now() - start_time)
         sys.stdout.flush()
-        for result in sampler.sample(pos, iterations=1, storechain=True):
+        for result in sampler.sample(pos, iterations=1, store=True):
             pos, _, _, blobs = result
             samples[i] = pos
             src.tools.write_state_to_file(pos, blobs, mcmc_chains_fp,
                                           blob_fp, mcmc_params, runid)
             i += 1
-    if mcmc_params.pool:
-        pool.close()
+    #if mcmc_params.pool:
+    pool.close()
 
     np.save(mcmc_params.samples_filename, samples)
 
