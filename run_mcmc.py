@@ -77,7 +77,11 @@ def lnprob(model_params, model, observables, extra_observables, map_obj):
 
     for i in range(mcmc_params.n_realizations):
         if exp_params.map_smoothing:
-            if exp_params.FWHM_nu is None:
+            if exp_params.use_linewidth_bins:
+                map_obj.map, map_obj.lum_func = src.tools.create_smoothed_map(
+                    model, model_params
+                )
+            elif exp_params.FWHM_nu is None:
                 map_obj.map, map_obj.lum_func = src.tools.create_smoothed_map(
                     model, model_params
                 )

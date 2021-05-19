@@ -169,7 +169,11 @@ def get_data(mcmc_params, exp_params, model,
         model_params = mcmc_params.model_params_true[model.label]
         for i in range(mcmc_params.n_patches):
             if exp_params.map_smoothing:
-                if exp_params.FWHM_nu is None:
+                if exp_params.use_linewidth_bins:
+                    maps[i], _ = create_smoothed_map(
+                        model, model_params
+                    )
+                elif exp_params.FWHM_nu is None:
                     maps[i], _ = create_smoothed_map(
                         model, model_params
                     )
@@ -415,7 +419,11 @@ def create_smoothed_map_3d(model, model_params, halos=None):
     sigma_z = exp_params.FWHM_nu / dnu / np.sqrt(8 * np.log(2))
     # print(sigma_ang, sigma_z)
     # convolve map with gaussian beam
-    model.map_obj.map = gaussian_smooth_3d(model.map_obj.map, sigma_ang, sigma_ang, sigma_z)
+    #model.map_obj.map = gaussian_smooth_3d(model.map_obj.map, sigma_ang, sigma_ang, sigma_z)
+
+    model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma_ang, mode='wrap', axis=0, truncate=5)
+    model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma_ang, mode='wrap', axis=1, truncate=5)
+    model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma_z, mode='wrap', axis=2, truncate=5)
 
     # plt.figure()
     # plt.imshow(filteredmap[:, :, 0], interpolation='none')
