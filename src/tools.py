@@ -326,8 +326,10 @@ def create_smoothed_map(model, model_params, halos=None):
 
     sigma = exp_params.FWHM / pixwidth / np.sqrt(8 * np.log(2))
     # convolve map with gaussian beam
-    model.map_obj.map = gaussian_smooth(model.map_obj.map, sigma, sigma)
-
+    #model.map_obj.map = gaussian_smooth(model.map_obj.map, sigma, sigma)
+    model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma, mode='wrap', axis=0, truncate=5)
+    model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma, mode='wrap', axis=1, truncate=5)
+# ms2 = scipy.ndimage.gaussian_filter1d(ms2, sigma=sy, mode='wrap', axis=1, truncate=5)
     # plt.figure()
     # plt.imshow(filteredmap[:, :, 0], interpolation='none')
     # plt.show()
@@ -337,11 +339,11 @@ def create_smoothed_map(model, model_params, halos=None):
 
     model.map_obj.pix_binedges_x = np.linspace(
         model.map_obj.pix_binedges_x[0], model.map_obj.pix_binedges_x[-1],
-        (len(model.map_obj.pix_binedges_x) - 1) / factor + 1)
+        (len(model.map_obj.pix_binedges_x) - 1) // factor + 1)
 
     model.map_obj.pix_binedges_y = np.linspace(
         model.map_obj.pix_binedges_y[0], model.map_obj.pix_binedges_y[-1],
-        (len(model.map_obj.pix_binedges_y) - 1) / factor + 1)
+        (len(model.map_obj.pix_binedges_y) - 1) // factor + 1)
     
     # degrade map back to low-res grid
     model.map_obj.map = degrade(model.map_obj.map, factor)

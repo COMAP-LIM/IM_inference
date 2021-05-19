@@ -4,6 +4,7 @@ import src.tools
 import sys
 import scipy as sp
 import os
+from scipy.ndimage import gaussian_filter1d
 
 
 class Model:
@@ -206,15 +207,75 @@ class Mhalo_to_Lco(Model):
 
         # Transform from Luminosity to Temperature
         halos.Tco = self.T_line(halos)
+        if self.exp_params.use_linewidth_bins:
 
-        # flip frequency bins because np.histogram needs increasing bins
-        bins3D = [map_obj.pix_binedges_x,
-                  map_obj.pix_binedges_y, map_obj.nu_binedges[::-1]]
+            # flip frequency bins because np.histogram needs increasing bins
+            bins3D = [map_obj.pix_binedges_x,
+                    map_obj.pix_binedges_y, map_obj.nu_binedges[::-1]]
 
-        # bin in RA, DEC, NU_obs
-        maps, _ = np.histogramdd(np.c_[halos.ra, halos.dec, halos.nu],
-                                 bins=bins3D,
-                                 weights=halos.Tco)
+            # No smoothing for halos lighter than 1e11 Msun
+            wh = (halos.M < 1e11)
+            maps = np.histogramdd(np.c_[halos.ra[wh], halos.dec[wh], halos.nu[wh]],
+                                  bins=bins3D, weights=halos.Tco[wh])[0]
+
+            # go to finer resolution in frequency
+            factor = self.exp_params.resolution_factor
+            self.map_obj.dnu /= factor
+            self.map_obj.nu_binedges = np.linspace(
+                self.map_obj.nu_binedges[0], self.map_obj.nu_binedges[-1],
+                factor * (len(self.map_obj.nu_binedges) - 1) + 1)
+            bins3D = [map_obj.pix_binedges_x,
+                    map_obj.pix_binedges_y, map_obj.nu_binedges[::-1]]
+            
+            # select highmass halos
+            wh = np.invert(wh)
+            ra = halos.ra[wh]
+            dec = halos.dec[wh]
+            nu = halos.nu[wh]
+            Tco = halos.Tco[wh] * factor # to account for 1/dnu factor in Tco
+            M = halos.M[wh]
+
+            # find virial velocities
+            z_mid = self.map_obj.z_array[self.map_obj.n_z // 2]  # middle redshift
+            h_z_mid = self.map_obj.cosmo.H0.value * self.map_obj.cosmo.efunc(z_mid) / 100
+            vvir = 0.98 * 35 * (M * h_z_mid / 1e10) ** (1.0/3) / 3e5  # virial velocity, v/c
+
+            nu_mid = self.map_obj.nu_binedges[(len(self.map_obj.nu_binedges) - 1) // 2]  # should be 30 GHz
+
+            n_vvir_bins = 17
+            vvir_bins = np.linspace(vvir.min() - 1e-5, vvir.max() + 1e-5, n_vvir_bins)
+
+            hr_maps = np.zeros((len(self.map_obj.pix_binedges_x) - 1, 
+                                len(self.map_obj.pix_binedges_y) - 1, 
+                                len(self.map_obj.nu_binedges) - 1))
+            for i in range(n_vvir_bins - 1):
+                wh = (vvir > vvir_bins[i]) * (vvir < vvir_bins[i+1])
+                vvir_med = np.median(vvir[wh])
+                sz = vvir_med * nu_mid / self.map_obj.dnu / np.sqrt(8 * np.log(2))
+                print(vvir_med * nu_mid * 1e3, i + 1)
+                if len(ra[wh] > 0):
+                    hr_maps = hr_maps + gaussian_filter1d(
+                        np.histogramdd(np.c_[ra[wh], dec[wh], nu[wh]],
+                                    bins=bins3D, weights=Tco[wh])[0], 
+                        sigma=sz, mode='wrap', axis=2, truncate=5)
+            
+            # revert back to lowres grid and combine
+            sh = hr_maps.shape
+            maps = maps + hr_maps.reshape(sh[0], sh[1], sh[2] // factor, factor).mean(-1)
+            self.map_obj.dnu *= factor
+            self.map_obj.nu_binedges = np.linspace(
+                self.map_obj.nu_binedges[0], self.map_obj.nu_binedges[-1],
+                (len(self.map_obj.nu_binedges) - 1) // factor + 1)
+
+        else:
+            # flip frequency bins because np.histogram needs increasing bins
+            bins3D = [map_obj.pix_binedges_x,
+                    map_obj.pix_binedges_y, map_obj.nu_binedges[::-1]]
+
+            # bin in RA, DEC, NU_obs
+            maps, _ = np.histogramdd(np.c_[halos.ra, halos.dec, halos.nu],
+                                    bins=bins3D,
+                                    weights=halos.Tco)
 
         # flip back frequency bins
         return maps[:, :, ::-1], lum_func

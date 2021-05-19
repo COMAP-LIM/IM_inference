@@ -6,6 +6,7 @@ map_smoothing = True
 FWHM = 4  # arcmin Haavard, Pullen
 FWHM_nu = 40 * 1e-3  # in GHz
 resolution_factor = 4  # how much finer resolution to use for pixels in high-res map before smoothing
+use_linewidth_bins = True
 # FWHM = 6  # arcmin Li
 
 lumfunc_bins = np.logspace(3.5, 7.5, 51)
