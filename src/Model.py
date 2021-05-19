@@ -252,7 +252,7 @@ class Mhalo_to_Lco(Model):
                 wh = (vvir > vvir_bins[i]) * (vvir < vvir_bins[i+1])
                 vvir_med = np.median(vvir[wh])
                 sz = vvir_med * nu_mid / self.map_obj.dnu / np.sqrt(8 * np.log(2))
-                print(vvir_med * nu_mid * 1e3, i + 1)
+                # print(vvir_med * nu_mid * 1e3, i + 1)
                 if len(ra[wh] > 0):
                     hr_maps = hr_maps + gaussian_filter1d(
                         np.histogramdd(np.c_[ra[wh], dec[wh], nu[wh]],
