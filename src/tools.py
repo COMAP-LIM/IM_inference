@@ -38,6 +38,8 @@ def set_up_mcmc(mcmc_params, exp_params):
         lum = src.Observable.Luminosity_Function()
         extra_observables.append(lum)
     
+    map_obj.observables = observables
+    
     if (mcmc_params.mcmc_model == 'wn_ps'):
         model = src.Model.WhiteNoisePowerSpectrum(exp_params)
     if (mcmc_params.mcmc_model == 'pl_ps'):
@@ -317,11 +319,18 @@ def create_smoothed_map(model, model_params, halos=None):
     model.map_obj.pix_binedges_y = np.linspace(
         model.map_obj.pix_binedges_y[0], model.map_obj.pix_binedges_y[-1],
         factor * (len(model.map_obj.pix_binedges_y) - 1) + 1)
+    
+    
     # make high-resolution map
     if halos is None:
         model.map_obj.map, extra = model.generate_map(model_params)
     else:
         model.map_obj.map, extra = model.generate_map(model_params, halos)
+    
+    for observable in model.map_obj.observables: 
+        if isinstance(observable, src.Observable.Power_Spectrum):
+            print(" Hallo Computing map power spectrum before beam smoothing is applied:")
+            observable.calculate_observable(model.map_obj)
     
     #print("binedges second", model.map_obj.pix_binedges_x)
     pixwidth = (
@@ -329,14 +338,15 @@ def create_smoothed_map(model, model_params, halos=None):
     ) * 60
 
     sigma = exp_params.FWHM / pixwidth / np.sqrt(8 * np.log(2))
-    # convolve map with gaussian beam
-    #model.map_obj.map = gaussian_smooth(model.map_obj.map, sigma, sigma)
-    model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma, mode='wrap', axis=0, truncate=5)
-    model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma, mode='wrap', axis=1, truncate=5)
-# ms2 = scipy.ndimage.gaussian_filter1d(ms2, sigma=sy, mode='wrap', axis=1, truncate=5)
-    # plt.figure()
-    # plt.imshow(filteredmap[:, :, 0], interpolation='none')
-    # plt.show()
+    if sigma > 0:
+        # convolve map with gaussian beam
+        #model.map_obj.map = gaussian_smooth(model.map_obj.map, sigma, sigma)
+        model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma, mode='wrap', axis=0, truncate=5)
+        model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma, mode='wrap', axis=1, truncate=5)
+        # ms2 = scipy.ndimage.gaussian_filter1d(ms2, sigma=sy, mode='wrap', axis=1, truncate=5)
+        # plt.figure()
+        # plt.imshow(filteredmap[:, :, 0], interpolation='none')
+        # plt.show()
     
     # change grid to low resolution again
     model.map_obj.Ompix *= factor * factor
@@ -420,10 +430,12 @@ def create_smoothed_map_3d(model, model_params, halos=None):
     # print(sigma_ang, sigma_z)
     # convolve map with gaussian beam
     #model.map_obj.map = gaussian_smooth_3d(model.map_obj.map, sigma_ang, sigma_ang, sigma_z)
-
-    model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma_ang, mode='wrap', axis=0, truncate=5)
-    model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma_ang, mode='wrap', axis=1, truncate=5)
-    model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma_z, mode='wrap', axis=2, truncate=5)
+    if sigma_ang > 0:
+        model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma_ang, mode='wrap', axis=0, truncate=5)
+        model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma_ang, mode='wrap', axis=1, truncate=5)
+    
+    if sigma_z > 0:
+        model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma_z, mode='wrap', axis=2, truncate=5)
 
     # plt.figure()
     # plt.imshow(filteredmap[:, :, 0], interpolation='none')
@@ -640,10 +652,10 @@ def cull_peakpatch_catalogue(halos, min_mass, map_obj):
     """
     crops the halo catalogue to only include desired halos
     """
-    dm = [(halos.M > min_mass) * (halos.redshift >= map_obj.z_i)
+    dm = ((halos.M > min_mass) * (halos.redshift >= map_obj.z_i)
                                * (np.abs(halos.ra) <= map_obj.fov_x / 2)
                                * (np.abs(halos.dec) <= map_obj.fov_y / 2)
-                               * (halos.redshift <= map_obj.z_f)]
+                               * (halos.redshift <= map_obj.z_f))
 
     for i in dir(halos):
         if i[0] == '_':
