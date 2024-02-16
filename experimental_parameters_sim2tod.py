@@ -9,6 +9,11 @@ resolution_factor = 1  # 1  # how much finer resolution to use for pixels in hig
 # FWHM = 6  # arcmin Li
 use_linewidth_bins = True
 
+comap_beam = True
+comap_beam_path = "/mn/stornext/d5/data/nilsoles/nils/im_inference_fork/tables"
+comap_beam_file = "beam.txt"
+comap_beam_radius_file = "beam_r.txt"
+
 lumfunc_bins = np.logspace(3.5, 7.5, 51)
 luminosity = 0.5 * (lumfunc_bins[:-1] + lumfunc_bins[1:])
 delta_lum = np.diff(lumfunc_bins)
@@ -16,12 +21,12 @@ delta_lum = np.diff(lumfunc_bins)
 # ps_kbins = np.logspace(1, 2, 10)
 # vid_Tbins = np.logspace(2,3, 11)
 # ps_kbins = np.logspace(-1.5, 0.0, 21)  # (-1.5, -0.5, 10)#10)
-ps_kbins = np.logspace(-1.5, 0.0, 21)  # (-1.5, -0.5, 10)#10)
+ps_kbins = np.logspace(-2.0, np.log10(1.5), 21) # (-1.5, -0.5, 10)#10)
 vid_Tbins = np.logspace(1, 2, 26)  # np.logspace(1, 2, 26)
 # vid_Tbins = np.logspace(5.7, 8, 10)  # Lco, 10x10x10
 
-n_pix_x = 150 * 4  # no of pixels
-n_pix_y = 150 * 4
+n_pix_x = 150 * 1  # no of pixels
+n_pix_y = 150 * 1
 
 # should be calculated later
 # sigma_T = 11.#2.75#1e9  # muK, noise Haavard
@@ -49,9 +54,9 @@ cov_extra_observables = ("lum",)
 # cov_model = 'wn_ps'
 # cov_model = 'pl_ps'
 # cov_model = 'Lco_Pullen'
-cov_model = 'Lco_Li'
+#cov_model = 'Lco_Li'
 # cov_model = 'simp_Li'
-#cov_model = "power_cov"
+cov_model = "power_cov"
 
 model_params_cov = dict()
 model_params_cov["wn_ps"] = [8.3]  # sigma_T for wn_ps

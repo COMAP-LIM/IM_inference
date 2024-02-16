@@ -43,8 +43,8 @@ class WhiteNoisePowerSpectrum(Model):
         mymap = np.random.randn(n_x, n_y, n_z) * sigma_T
         if self.exp_params.map_smoothing:
             return src.tools.gaussian_smooth(mymap, self.exp_params.sigma_x,
-                                             self.exp_params.sigma_y,
-                                             n_sigma=5.0)
+                                            self.exp_params.sigma_y,
+                                            n_sigma=5.0)
         return mymap
 
     def mcmc_walker_initial_positions(self, prior_params, n_walkers):
@@ -217,7 +217,7 @@ class Mhalo_to_Lco(Model):
             wh = (halos.M < 1e11)
             maps = np.histogramdd(np.c_[halos.ra[wh], halos.dec[wh], halos.nu[wh]],
                                   bins=bins3D, weights=halos.Tco[wh])[0]
-
+ 
             # go to finer resolution in frequency
             factor = self.exp_params.resolution_factor
             self.map_obj.dnu /= factor

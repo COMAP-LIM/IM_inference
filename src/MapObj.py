@@ -1,7 +1,7 @@
 import numpy as np
 from astropy.cosmology import FlatLambdaCDM
 from astropy import units as u
-
+import pickle
 
 class MapObj:
     """
@@ -10,8 +10,13 @@ class MapObj:
     """
     def __init__(self, exp_params):
         self.exp_params = exp_params
-        self.cosmo = FlatLambdaCDM(H0=70, Om0=0.286, Ob0=0.047)  # FlatLambdaCDM(H0=cosmos.h*100*u.km/u.s/u.Mpc,
+        # self.cosmo = FlatLambdaCDM(H0=70, Om0=0.286, Ob0=0.047)  # FlatLambdaCDM(H0=cosmos.h*100*u.km/u.s/u.Mpc,
                             #   Om0=cosmos.Omega_M, Ob0=cosmos.Omega_B)
+        cosmo = "/mn/stornext/d5/data/nilsoles/nils/pipeline/cosmologies/default_comap_cosmology.pkl"
+
+        with open(cosmo, mode = "rb") as cosmofile:
+            self.cosmo = pickle.load(cosmofile)
+
         #cosmo1=getattr(astropy.cosmology, exp_params.cosmology)
         #cosmo = cosmo1.clone(name= exp_params.cosmology+' mod', H0=cosmos.h*100*u.km/u.s/u.Mpc, Om0=cosmos.Omega_M, Ob0=cosmos.Omega_B)
         self.fov_x = float(exp_params.fov_x)

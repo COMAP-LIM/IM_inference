@@ -2,6 +2,8 @@ import numpy as np
 import numpy.fft as fft
 import scipy
 from scipy import signal
+from astropy import units as u
+import scipy.interpolate
 import sys
 import copyreg
 import copy
@@ -213,7 +215,7 @@ def get_data(mcmc_params, exp_params, model,
             if 0 in observable.values:
                 print('some of data values are equal to 0')
     data_fp = os.path.join(mcmc_params.output_dir, 'blob',
-                           'data_run{0:d}.npy'.format(runid))
+                        'data_run{0:d}.npy'.format(runid))
     np.save(data_fp, data)
     insert_data(data, observables)
     return data
@@ -231,10 +233,18 @@ def calculate_power_spec_3d(map_obj, k_bin=None):
         dk = max(np.diff(kx)[0], np.diff(ky)[0], np.diff(kz)[0])
         kmax_dk = int(np.ceil(max(np.amax(kx), np.amax(ky), np.amax(kz)) / dk))
         k_bin = np.linspace(0, kmax_dk, kmax_dk + 1)
+        
 
-    fft_map = fft.fftn(map_obj.map) / (map_obj.n_x * map_obj.n_y * map_obj.n_z)
+    # fft_map = fft.fftn(map_obj.map) / (map_obj.n_x * map_obj.n_y * map_obj.n_z)
+    
+    # print((kgrid * np.abs(fft_map) ** 2).max(), map_obj.volume / (map_obj.n_x * map_obj.n_y * map_obj.n_z))
+    # print((kgrid * np.abs(fft_map) ** 2).max() * map_obj.volume / (map_obj.n_x * map_obj.n_y * map_obj.n_z))
+    
+    # ps = np.abs(fft_map)**2 * map_obj.volume 
 
-    ps = np.abs(fft_map)**2 * map_obj.volume
+    fft_map = fft.fftn(map_obj.map)
+    
+    ps = np.abs(fft_map)**2 * map_obj.voxel_volume /  (map_obj.n_x * map_obj.n_y * map_obj.n_z)
 
     Pk_modes = np.histogram(
         kgrid[kgrid > 0], bins=k_bin, weights=ps[kgrid > 0])[0]
@@ -303,7 +313,6 @@ def gaussian_smooth(mymap, sigma_x, sigma_y, n_sigma=5.0):
     smoothed_map = signal.fftconvolve(mymap, kernel[:, :, None], mode='same')
     return smoothed_map
 
-
 def create_smoothed_map(model, model_params, halos=None):
     exp_params = model.exp_params
     factor = exp_params.resolution_factor
@@ -329,7 +338,6 @@ def create_smoothed_map(model, model_params, halos=None):
     
     for observable in model.map_obj.observables: 
         if isinstance(observable, src.Observable.Power_Spectrum):
-            print(" Hallo Computing map power spectrum before beam smoothing is applied:")
             observable.calculate_observable(model.map_obj)
     
     #print("binedges second", model.map_obj.pix_binedges_x)
@@ -338,16 +346,38 @@ def create_smoothed_map(model, model_params, halos=None):
     ) * 60
 
     sigma = exp_params.FWHM / pixwidth / np.sqrt(8 * np.log(2))
-    if sigma > 0:
+    if sigma > 0 and not exp_params.comap_beam:
         # convolve map with gaussian beam
         #model.map_obj.map = gaussian_smooth(model.map_obj.map, sigma, sigma)
+        model.map_obj.map_unsmoothed = model.map_obj.map.copy()
         model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma, mode='wrap', axis=0, truncate=5)
         model.map_obj.map = scipy.ndimage.gaussian_filter1d(model.map_obj.map, sigma=sigma, mode='wrap', axis=1, truncate=5)
         # ms2 = scipy.ndimage.gaussian_filter1d(ms2, sigma=sy, mode='wrap', axis=1, truncate=5)
         # plt.figure()
         # plt.imshow(filteredmap[:, :, 0], interpolation='none')
         # plt.show()
-    
+    elif exp_params.comap_beam:
+        beam_radius = np.loadtxt(os.path.join(exp_params.comap_beam_path, exp_params.comap_beam_radius_file))
+        beam = np.loadtxt(os.path.join(exp_params.comap_beam_path, exp_params.comap_beam_file))
+        
+        x_kernel = np.arange(-1, 1, model.map_obj.pix_size_x) * u.degree
+        y_kernel = np.arange(-1, 1, model.map_obj.pix_size_y) * u.degree
+
+        beam_interp = scipy.interpolate.CubicSpline(beam_radius, beam)
+
+        X, Y = np.meshgrid(x_kernel, y_kernel)
+        R = np.sqrt(X ** 2 + Y ** 2)
+
+        beam_2D = beam_interp(R)
+        beam_2D[R > 1 * u.degree] *= 0 
+        beam_2D /= np.sum(beam_2D)
+        normalisation = 0.72 / np.sum(beam_2D[R.to(u.arcmin) <= 6.4 * u.arcmin])
+        beam_2D *= normalisation
+        
+        model.map_obj.map_unsmoothed = model.map_obj.map.copy()
+        model.map_obj.map = scipy.signal.fftconvolve(model.map_obj.map, beam_2D[..., None], mode = "same", axes = (0, 1))
+
+        
     # change grid to low resolution again
     model.map_obj.Ompix *= factor * factor
 

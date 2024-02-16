@@ -94,7 +94,8 @@ prior_params["power"] = [
 
 halo_catalogue_folder = (
     # "/mn/stornext/d22/cmbco/comap/ihle/im_inference/full_cita_catalogues/"
-    "/mn/stornext/d16/cmbco/comap/ihle/old_d16_haavard/haavard/im_inference/catalogues/"
+    # "/mn/stornext/d16/cmbco/comap/ihle/old_d16_haavard/haavard/im_inference/catalogues/"
+    "/mn/stornext/d16/cmbco/comap/data/aux_data/peak_patch_catalogues/low_z/"
 )
 
 #'catalogues_2deg/' #'catalogues/'
